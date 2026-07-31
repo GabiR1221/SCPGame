@@ -1,0 +1,3 @@
+--localscript in StarterPlayerScripts in Controllers folder
+--!strict
+-- Central home for nonessential camera effects. Never trust camera state for validation.
