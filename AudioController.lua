@@ -1,0 +1,3 @@
+--localscript in StarterPlayerScripts in Controllers folder
+--!strict
+-- Central home for local ambience. Resolve streamed rooms by attributes when needed.
