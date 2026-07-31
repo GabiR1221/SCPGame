@@ -1,0 +1,3 @@
+--localscript in StarterPlayerScripts in Controllers folder
+--!strict
+-- Central home for cosmetic Lighting tweens; gameplay visibility remains server-defined.
