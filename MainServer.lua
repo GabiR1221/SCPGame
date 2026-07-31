@@ -1,3 +1,4 @@
+--Serverscript in ServerScriptService
 --!strict
 local ServerStorage=game:GetService("ServerStorage")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
