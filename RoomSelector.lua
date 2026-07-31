@@ -1,3 +1,4 @@
+--Modulescript in Services folder in ServerScriptService
 --!strict
 local RoomSelector = {}; RoomSelector.__index = RoomSelector
 function RoomSelector.new(registry: any, pacing: any, config: any): any return setmetatable({ Registry=registry, Pacing=pacing, Config=config }, RoomSelector) end
