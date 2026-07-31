@@ -1,3 +1,4 @@
+--Modulescript in Services folder in ServerScriptService
 --!strict
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local Constants=require(ReplicatedStorage.Shared.RoomConstants)
