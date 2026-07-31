@@ -1,3 +1,4 @@
+--Modulescript in Services folder in ServerScriptService
 --!strict
 local PacingDirector = {}; PacingDirector.__index = PacingDirector
 function PacingDirector.new(config: any): any return setmetatable({ Config = config }, PacingDirector) end
