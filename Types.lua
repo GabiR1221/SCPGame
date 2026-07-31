@@ -1,3 +1,4 @@
+--Modulescript in Shared folder in replicatedstorage
 --!strict
 export type RoomTemplate = {
 	Id: string, Model: Model, Theme: string, Category: string, Weight: number,
