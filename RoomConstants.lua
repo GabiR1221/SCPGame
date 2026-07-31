@@ -1,3 +1,4 @@
+--Modulescript in Shared folder in replicatedstorage
 --!strict
 return table.freeze({
 	States = table.freeze({ Generated = "Generated", Active = "Active", Completed = "Completed", Unloading = "Unloading", Destroyed = "Destroyed" }),
