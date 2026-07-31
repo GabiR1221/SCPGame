@@ -1,3 +1,4 @@
+--Modulescript in Shared folder in replicatedstorage
 --!strict
 return table.freeze({
 	Generation = table.freeze({ RoomsAhead = 5, RoomsBehind = 2, MaximumActiveRooms = 12, MaximumGenerationRetries = 8, GenerationDelay = 0.02, CheckBoundsOverlap = true }),
