@@ -1,3 +1,4 @@
+--Modulescript in Services folder in ServerScriptService
 --!strict
 local Cleanup={}; Cleanup.__index=Cleanup
 function Cleanup.new(lifecycle:any, config:any): any return setmetatable({Lifecycle=lifecycle,Config=config},Cleanup) end
