@@ -1,3 +1,4 @@
+--Modulescript in Services folder in ServerScriptService
 --!strict
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
