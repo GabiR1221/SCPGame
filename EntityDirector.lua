@@ -1,3 +1,4 @@
+--Modulescript in Services folder in ServerScriptService
 --!strict
 -- Intentionally contains no entity implementation. This demonstrates the extension boundary.
 local EntityDirector={}
