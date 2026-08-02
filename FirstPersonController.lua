@@ -22,9 +22,11 @@ local characterConnections: {RBXScriptConnection} = {}
 local lifecycleConnections: {RBXScriptConnection} = {}
 local poseConnections: {RBXScriptConnection} = {}
 
-local waist: Motor6D? = nil
-local neck: Motor6D? = nil
-local rootMotor: Motor6D? = nil
+type PoseJoint = Motor6D | AnimationConstraint
+
+local waist: PoseJoint? = nil
+local neck: PoseJoint? = nil
+local rootMotor: PoseJoint? = nil
 
 local humanoid: Humanoid? = nil
 local rootPart: BasePart? = nil
@@ -37,14 +39,88 @@ local desiredBodyOffset = 0
 local lastCameraForward = Vector3.new(0, 0, -1)
 local nextDebugOutput = 0
 
-local function findMotor(character: Model, name: string): Motor6D?
+local nextPoseDebugOutput = 0
+local rawCameraPitch = 0
+
+-- These are the exact layers written during PreSimulation. PreAnimation clears
+-- the joints to neutral, then the Animator rebuilds its current locomotion pose.
+local waistLayer = CFrame.identity
+local neckLayer = CFrame.identity
+local rootLayer = CFrame.identity
+
+local function getConnectedParts(joint: PoseJoint): (BasePart?, BasePart?)
+	if joint:IsA("Motor6D") then
+		return joint.Part0, joint.Part1
+	end
+
+	local attachment0 = joint.Attachment0
+	local attachment1 = joint.Attachment1
+	local parent0 = if attachment0 then attachment0.Parent else nil
+	local parent1 = if attachment1 then attachment1.Parent else nil
+	local part0 = if parent0 and parent0:IsA("BasePart") then parent0 else nil
+	local part1 = if parent1 and parent1:IsA("BasePart") then parent1 else nil
+	return part0, part1
+end
+
+local function hasRelationship(joint: PoseJoint, part0Name: string, part1Name: string): boolean
+	local part0, part1 = getConnectedParts(joint)
+	if part0 == nil or part1 == nil then
+		return false
+	end
+
+	return (part0.Name == part0Name and part1.Name == part1Name)
+		or (part0.Name == part1Name and part1.Name == part0Name)
+end
+
+local function findPoseJoint(
+	character: Model,
+	names: {string},
+	part0Name: string,
+	part1Name: string
+): PoseJoint?
+	-- Prefer exact semantic names. Never use partial-name matching because it can
+	-- accidentally select an accessory or an unrelated animation joint.
+	for _, name in names do
+		for _, descendant in character:GetDescendants() do
+			if descendant.Name == name then
+				if descendant:IsA("Motor6D") then
+					return descendant
+				elseif descendant:IsA("AnimationConstraint") then
+					return descendant
+				end
+			end
+		end
+	end
+
+	-- Attachment/part connectivity is a safe fallback for renamed R15 joints.
 	for _, descendant in character:GetDescendants() do
-		if descendant:IsA("Motor6D") and descendant.Name == name then
-			return descendant
+		if descendant:IsA("Motor6D") then
+			if hasRelationship(descendant, part0Name, part1Name) then
+				return descendant
+			end
+		elseif descendant:IsA("AnimationConstraint") then
+			if hasRelationship(descendant, part0Name, part1Name) then
+				return descendant
+			end
 		end
 	end
 
 	return nil
+end
+
+local function describeJoint(label: string, joint: PoseJoint?)
+	if joint == nil then
+		print(`[FirstPerson] {label}: missing`)
+		return
+	end
+
+	local part0, part1 = getConnectedParts(joint)
+	local endpoint0 = if part0 then part0:GetFullName() else "missing attachment/part 0"
+	local endpoint1 = if part1 then part1:GetFullName() else "missing attachment/part 1"
+	print(
+		`[FirstPerson] {label}: class={joint.ClassName}, path={joint:GetFullName()}, `
+			.. `endpoints=({endpoint0}) -> ({endpoint1})`
+	)
 end
 
 local function disconnectConnections(connections: {RBXScriptConnection})
@@ -235,6 +311,7 @@ function Controller._updateBody(self: any, dt: number)
 		-Config.LookBend.MaximumPitch,
 		Config.LookBend.MaximumPitch
 	)
+	rawCameraPitch = math.asin(safeLookY)
 
 	local pitchAlpha = math.min(
 		1,
@@ -374,6 +451,9 @@ function Controller._resetPose(_self: any)
 	if activeRootMotor ~= nil then
 		activeRootMotor.Transform = CFrame.identity
 	end
+	waistLayer = CFrame.identity
+	neckLayer = CFrame.identity
+	rootLayer = CFrame.identity
 end
 
 function Controller._applyPose(self: any)
@@ -384,32 +464,57 @@ function Controller._applyPose(self: any)
 	local activeWaist = waist
 	local activeNeck = neck
 	local activeRootMotor = rootMotor
+	local poseApplied = false
 
 	if Config.LookBend.Enabled then
 		if activeWaist ~= nil then
-			activeWaist.Transform *= CFrame.Angles(
+			waistLayer = CFrame.Angles(
 				smoothedPitch
+					* Config.LookBend.PitchSign
 					* Config.LookBend.WaistWeight,
 				0,
 				0
 			)
+			activeWaist.Transform *= waistLayer
+			poseApplied = true
 		end
 
 		if activeNeck ~= nil then
-			activeNeck.Transform *= CFrame.Angles(
+			neckLayer = CFrame.Angles(
 				smoothedPitch
+					* Config.LookBend.PitchSign
 					* Config.LookBend.NeckWeight,
 				0,
 				0
 			)
+			activeNeck.Transform *= neckLayer
+			poseApplied = true
 		end
 	end
 
 	if activeRootMotor ~= nil then
-		activeRootMotor.Transform *= CFrame.new(
+		rootLayer = CFrame.new(
 			0,
 			0,
 			desiredBodyOffset
+		)
+		activeRootMotor.Transform *= rootLayer
+		poseApplied = true
+	end
+
+	if Config.Debug and os.clock() >= nextPoseDebugOutput then
+		nextPoseDebugOutput = os.clock() + Config.FirstPersonBody.DebugInterval
+		local waistBend = smoothedPitch * Config.LookBend.PitchSign * Config.LookBend.WaistWeight
+		local neckBend = smoothedPitch * Config.LookBend.PitchSign * Config.LookBend.NeckWeight
+		print(
+			`[FirstPersonPose] rawPitch={math.deg(rawCameraPitch)}, `
+				.. `smoothedPitch={math.deg(smoothedPitch)}, `
+				.. `waistTarget={math.deg(waistBend)}, neckTarget={math.deg(neckBend)}, `
+				.. `applied={poseApplied}, `
+				.. `waistClass={if activeWaist then activeWaist.ClassName else "missing"}, `
+				.. `neckClass={if activeNeck then activeNeck.ClassName else "missing"}, `
+				.. `waistTransform={if activeWaist then activeWaist.Transform else CFrame.identity}, `
+				.. `neckTransform={if activeNeck then activeNeck.Transform else CFrame.identity}`
 		)
 	end
 end
@@ -441,6 +546,8 @@ function Controller._releaseCharacter(self: any)
 	smoothedPitch = 0
 	desiredBodyOffset = 0
 	nextDebugOutput = 0
+	nextPoseDebugOutput = 0
+	rawCameraPitch = 0
 end
 
 function Controller._bindCharacter(
@@ -455,12 +562,16 @@ function Controller._bindCharacter(
 		end
 	end
 
-	waist = findMotor(character, "Waist")
-	neck = findMotor(character, "Neck")
+	-- CharacterAdded can fire before the complete rig replicates. Waiting for the
+	-- semantic body parts once lets us resolve a stable cache without per-frame scans.
+	character:WaitForChild("LowerTorso", 10)
+	character:WaitForChild("UpperTorso", 10)
+	character:WaitForChild("Head", 10)
+	character:WaitForChild("HumanoidRootPart", 10)
 
-	rootMotor =
-		findMotor(character, "Root")
-		or findMotor(character, "RootJoint")
+	waist = findPoseJoint(character, {"Waist"}, "LowerTorso", "UpperTorso")
+	neck = findPoseJoint(character, {"Neck"}, "UpperTorso", "Head")
+	rootMotor = findPoseJoint(character, {"Root", "RootJoint"}, "HumanoidRootPart", "LowerTorso")
 
 	local foundRoot =
 		character:FindFirstChild("HumanoidRootPart")
@@ -475,6 +586,12 @@ function Controller._bindCharacter(
 
 	humanoid =
 		character:FindFirstChildOfClass("Humanoid")
+
+	waistLayer = CFrame.identity
+	neckLayer = CFrame.identity
+	rootLayer = CFrame.identity
+	smoothedPitch = 0
+	rawCameraPitch = 0
 
 	local camera = workspace.CurrentCamera
 
@@ -495,15 +612,28 @@ function Controller._bindCharacter(
 		local activeRoot = rootPart
 		local activeHumanoid = humanoid
 
-		print(
-			`[FirstPerson] `
-				.. `Waist={if activeWaist then activeWaist:GetFullName() else "missing"}, `
-				.. `Neck={if activeNeck then activeNeck:GetFullName() else "missing"}, `
-				.. `RootMotor={if activeRootMotor then activeRootMotor:GetFullName() else "missing"}, `
-				.. `RootPart={if activeRoot then activeRoot:GetFullName() else "missing"}, `
-				.. `Humanoid={if activeHumanoid then activeHumanoid:GetFullName() else "missing"}`
-		)
+		describeJoint("Waist", activeWaist)
+		describeJoint("Neck", activeNeck)
+		describeJoint("Root", activeRootMotor)
+		print(`[FirstPerson] RootPart={if activeRoot then activeRoot:GetFullName() else "missing"}, Humanoid={if activeHumanoid then activeHumanoid:GetFullName() else "missing"}`)
 	end
+
+	if Config.LookBend.Enabled and waist == nil then
+		warn("[FirstPerson] Look bending is enabled, but no supported Waist Motor6D or AnimationConstraint was found")
+	end
+
+	table.insert(
+		characterConnections,
+		if humanoid ~= nil
+			then humanoid.Died:Connect(function()
+				self:_releaseCharacter()
+			end)
+			else character.AncestryChanged:Connect(function(_, parent)
+				if parent == nil then
+					self:_releaseCharacter()
+				end
+			end)
+	)
 
 	table.insert(
 		characterConnections,
