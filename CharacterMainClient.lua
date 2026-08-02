@@ -1,0 +1,13 @@
+--!strict
+-- LocalScript: StarterPlayer/StarterPlayerScripts/ClientMain (the player framework's only bootstrap)
+local controllers=script.Parent:WaitForChild("Controllers")
+local Camera=require(controllers:WaitForChild("CameraController")).new()
+local FirstPerson=require(controllers:WaitForChild("FirstPersonController"))
+local Animation=require(controllers:WaitForChild("CharacterAnimationController")).new()
+local Footsteps=require(controllers:WaitForChild("FootstepController")).new()
+local Viewmodel=require(controllers:WaitForChild("ViewmodelController")).new()
+Camera:Start(); FirstPerson:Start(); Animation:Start(); Footsteps:Start()
+require(controllers:WaitForChild("InputController")).Start(FirstPerson)
+require(controllers:WaitForChild("InteractionController")).new(Animation,Camera):Start()
+require(controllers:WaitForChild("CutsceneController")).new(Camera,Animation):Start()
+Viewmodel:Start()
