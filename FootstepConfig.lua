@@ -13,8 +13,8 @@ return table.freeze({
 	Volume=.45, PitchMin=.94, PitchMax=1.06,
 	MarkerStyle="Separate", -- "Combined" = Footstep values Left/Right; "Separate" = FootstepLeft/Right
 	MinimumStepInterval=.12, PreloadBatchSize=12, MaximumPreloadedSounds=256,
-	MarkerFallbackEnabled=true, FallbackUpdateInterval=.05,
-	FallbackIntervals={Walk=.46,Run=.28,Crouch=.62}, Debug=true,
+	MarkerFallbackEnabled=true, FallbackUpdateInterval=.05, MarkerFallbackSilenceTimeout=.9,
+	FallbackIntervals={Walk=.46,Run=.28,Crouch=.62}, Debug=false,
 	MaterialProfiles={
 		Wood="Wood", WoodPlanks="Wood",
 		Carpet="Carpet", Fabric="Carpet",
