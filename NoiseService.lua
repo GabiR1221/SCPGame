@@ -1,0 +1,10 @@
+--!strict
+-- ModuleScript: ServerScriptService/Services/NoiseService
+local Players=game:GetService("Players"); local RunService=game:GetService("RunService")
+local S={}; S.__index=S
+function S.new(tracker:any?):any return setmetatable({Tracker=tracker,Listeners={},Accum=0,Last={} :: {[Player]:number}},S) end
+function S.Subscribe(self:any,callback:(any)->()):()->() table.insert(self.Listeners,callback); return function() local i=table.find(self.Listeners,callback); if i then table.remove(self.Listeners,i) end end end
+function S.Emit(self:any,player:Player?,position:Vector3,radius:number,intensity:number,category:string,roomIndex:number?) local event={SourcePlayer=player,Position=position,Radius=math.clamp(radius,0,200),Intensity=math.clamp(intensity,0,1),Category=category,Timestamp=workspace:GetServerTimeNow(),RoomIndex=roomIndex}; for _,callback in self.Listeners do task.spawn(callback,event) end end
+function S.EmitInteraction(self:any,player:Player,position:Vector3,radius:number,roomIndex:number?) self:Emit(player,position,radius,.7,"Interaction",roomIndex) end
+function S.Start(self:any) RunService.Heartbeat:Connect(function(dt) self.Accum+=dt; if self.Accum<.25 then return end; self.Accum=0; for _,p in Players:GetPlayers() do local c=p.Character; local root=c and c:FindFirstChild("HumanoidRootPart"); local h=c and c:FindFirstChildOfClass("Humanoid"); if root and root:IsA("BasePart") and h and h.Health>0 and h.FloorMaterial~=Enum.Material.Air then local speed=Vector3.new(root.AssemblyLinearVelocity.X,0,root.AssemblyLinearVelocity.Z).Magnitude; if speed>2 then local now=workspace:GetServerTimeNow(); if now-(self.Last[p] or 0)>.65 then self.Last[p]=now; local crouched=h:GetAttribute("Crouched")==true; local running=not crouched and speed>13; self:Emit(p,root.Position,if crouched then 9 elseif running then 34 else 18,if crouched then .2 elseif running then .8 else .4,if crouched then "Crouching" elseif running then "Running" else "Walking",nil) end end end end end); Players.PlayerRemoving:Connect(function(p) self.Last[p]=nil end) end
+return S
