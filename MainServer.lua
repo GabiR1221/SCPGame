@@ -27,6 +27,14 @@ local function remote(name:string):RemoteEvent
 	end
 	local value=Instance.new("RemoteEvent"); value.Name=name; value.Parent=remotes; return value
 end
+local function unreliableRemote(name:string):UnreliableRemoteEvent
+	local existing=remotes:FindFirstChild(name)
+	if existing then
+		if existing:IsA("UnreliableRemoteEvent") then return existing end
+		error(`ReplicatedStorage.Remotes.{name} must be an UnreliableRemoteEvent`)
+	end
+	local value=Instance.new("UnreliableRemoteEvent"); value.Name=name; value.Parent=remotes; return value
+end
 local doorRemote=remotes:FindFirstChild("DoorStateChanged")::RemoteEvent?
 if not doorRemote then doorRemote=Instance.new("RemoteEvent"); doorRemote.Name="DoorStateChanged"; doorRemote.Parent=remotes end
 
@@ -36,6 +44,7 @@ local interactionRequest=remote("InteractionRequest")
 local interactionStateRemote=remote("InteractionStateChanged")
 local cutsceneRemote=remote("CutsceneEvent")
 local crouchRequest=remote("CrouchRequest")
+local lookPoseUpdate=unreliableRemote("LookPoseUpdate")
 local PlayerStateService: any=require(Services.PlayerStateService).new(characterStateRemote)
 local NoiseService: any=require(Services.NoiseService).new(Tracker)
 local InteractionService: any=require(Services.InteractionService).new(PlayerStateService,NoiseService,interactionStateRemote)
@@ -45,6 +54,7 @@ local CharacterService: any=require(Services.CharacterService).new(PlayerStateSe
 end)
 local CrouchService:any=require(Services.CrouchService).new(PlayerStateService)
 local DrawerService:any=require(Services.DrawerService).new()
+local LookPoseService=require(Services.LookPoseService)
 require(Services.PlayerFrameworkRoomBridge).Connect(Lifecycle,InteractionService,CutsceneService)
 
 -- Safe starter handlers. Replace attribute mutations with calls into your item/door
@@ -52,7 +62,7 @@ require(Services.PlayerFrameworkRoomBridge).Connect(Lifecycle,InteractionService
 InteractionService:RegisterHandler("OpenDrawer",function(player:Player,target:Instance) DrawerService:Open(player,target) end)
 InteractionService:RegisterHandler("PullLever",function(_player:Player,target:Instance) target:SetAttribute("Pulled",true) end)
 InteractionService:RegisterHandler("PressButton",function(_player:Player,target:Instance) target:SetAttribute("PressedAt",workspace:GetServerTimeNow()) end)
-PlayerStateService:Start(); NoiseService:Start(); InteractionService:Start(interactionRequest); CutsceneService:Start(); CharacterService:Start(); CrouchService:Start(crouchRequest)
+PlayerStateService:Start(); NoiseService:Start(); InteractionService:Start(interactionRequest); CutsceneService:Start(); CharacterService:Start(); CrouchService:Start(crouchRequest); LookPoseService.Start(lookPoseUpdate)
 
 local valid: boolean,errors: {string}=Registry:Scan()
 if not valid then error(`[Main] Room template validation failed with {#errors} error(s); correct every warning above`) end
