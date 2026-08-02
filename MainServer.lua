@@ -1,5 +1,5 @@
---Serverscript in ServerScriptService
 --!strict
+-- Script: ServerScriptService/Main
 local ServerStorage=game:GetService("ServerStorage")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local Workspace=game:GetService("Workspace")
@@ -19,8 +19,40 @@ end
 folder(ServerStorage,"RoomTemplates")
 local generated=folder(Workspace,"GeneratedRooms"); folder(Workspace,"RuntimeEntities")
 local remotes=folder(ReplicatedStorage,"Remotes")
+local function remote(name:string):RemoteEvent
+	local existing=remotes:FindFirstChild(name)
+	if existing then
+		assert(existing:IsA("RemoteEvent"),`ReplicatedStorage.Remotes.{name} must be a RemoteEvent`)
+		return existing :: RemoteEvent
+	end
+	local value=Instance.new("RemoteEvent"); value.Name=name; value.Parent=remotes; return value
+end
 local doorRemote=remotes:FindFirstChild("DoorStateChanged")::RemoteEvent?
 if not doorRemote then doorRemote=Instance.new("RemoteEvent"); doorRemote.Name="DoorStateChanged"; doorRemote.Parent=remotes end
+
+-- Player framework services are constructed once and share only narrow service APIs.
+local characterStateRemote=remote("CharacterStateChanged")
+local interactionRequest=remote("InteractionRequest")
+local interactionStateRemote=remote("InteractionStateChanged")
+local cutsceneRemote=remote("CutsceneEvent")
+local crouchRequest=remote("CrouchRequest")
+local PlayerStateService: any=require(Services.PlayerStateService).new(characterStateRemote)
+local NoiseService: any=require(Services.NoiseService).new(Tracker)
+local InteractionService: any=require(Services.InteractionService).new(PlayerStateService,NoiseService,interactionStateRemote)
+local CutsceneService: any=require(Services.CutsceneService).new(PlayerStateService,cutsceneRemote)
+local CharacterService: any=require(Services.CharacterService).new(PlayerStateService,characterStateRemote,function(player:Player,reason:string)
+	InteractionService:CancelPlayer(player,reason); CutsceneService:CancelPlayer(player,reason)
+end)
+local CrouchService:any=require(Services.CrouchService).new(PlayerStateService)
+local DrawerService:any=require(Services.DrawerService).new()
+require(Services.PlayerFrameworkRoomBridge).Connect(Lifecycle,InteractionService,CutsceneService)
+
+-- Safe starter handlers. Replace attribute mutations with calls into your item/door
+-- domain services; the client can never select these callbacks or their rewards.
+InteractionService:RegisterHandler("OpenDrawer",function(player:Player,target:Instance) DrawerService:Open(player,target) end)
+InteractionService:RegisterHandler("PullLever",function(_player:Player,target:Instance) target:SetAttribute("Pulled",true) end)
+InteractionService:RegisterHandler("PressButton",function(_player:Player,target:Instance) target:SetAttribute("PressedAt",workspace:GetServerTimeNow()) end)
+PlayerStateService:Start(); NoiseService:Start(); InteractionService:Start(interactionRequest); CutsceneService:Start(); CharacterService:Start(); CrouchService:Start(crouchRequest)
 
 local valid: boolean,errors: {string}=Registry:Scan()
 if not valid then error(`[Main] Room template validation failed with {#errors} error(s); correct every warning above`) end
