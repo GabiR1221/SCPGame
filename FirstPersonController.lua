@@ -12,6 +12,7 @@ local Config: any = require(
 )
 
 local LocalPlayer = Players.LocalPlayer :: Player
+local PoseJointUtil = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PoseJointUtil"))
 
 local Controller = {}
 Controller.__index = Controller
@@ -48,80 +49,6 @@ local waistLayer = CFrame.identity
 local neckLayer = CFrame.identity
 local rootLayer = CFrame.identity
 
-local function getConnectedParts(joint: PoseJoint): (BasePart?, BasePart?)
-	if joint:IsA("Motor6D") then
-		return joint.Part0, joint.Part1
-	end
-
-	local attachment0 = joint.Attachment0
-	local attachment1 = joint.Attachment1
-	local parent0 = if attachment0 then attachment0.Parent else nil
-	local parent1 = if attachment1 then attachment1.Parent else nil
-	local part0 = if parent0 and parent0:IsA("BasePart") then parent0 else nil
-	local part1 = if parent1 and parent1:IsA("BasePart") then parent1 else nil
-	return part0, part1
-end
-
-local function hasRelationship(joint: PoseJoint, part0Name: string, part1Name: string): boolean
-	local part0, part1 = getConnectedParts(joint)
-	if part0 == nil or part1 == nil then
-		return false
-	end
-
-	return (part0.Name == part0Name and part1.Name == part1Name)
-		or (part0.Name == part1Name and part1.Name == part0Name)
-end
-
-local function findPoseJoint(
-	character: Model,
-	names: {string},
-	part0Name: string,
-	part1Name: string
-): PoseJoint?
-	-- Prefer exact semantic names. Never use partial-name matching because it can
-	-- accidentally select an accessory or an unrelated animation joint.
-	for _, name in names do
-		for _, descendant in character:GetDescendants() do
-			if descendant.Name == name then
-				if descendant:IsA("Motor6D") then
-					return descendant
-				elseif descendant:IsA("AnimationConstraint") then
-					return descendant
-				end
-			end
-		end
-	end
-
-	-- Attachment/part connectivity is a safe fallback for renamed R15 joints.
-	for _, descendant in character:GetDescendants() do
-		if descendant:IsA("Motor6D") then
-			if hasRelationship(descendant, part0Name, part1Name) then
-				return descendant
-			end
-		elseif descendant:IsA("AnimationConstraint") then
-			if hasRelationship(descendant, part0Name, part1Name) then
-				return descendant
-			end
-		end
-	end
-
-	return nil
-end
-
-local function describeJoint(label: string, joint: PoseJoint?)
-	if joint == nil then
-		print(`[FirstPerson] {label}: missing`)
-		return
-	end
-
-	local part0, part1 = getConnectedParts(joint)
-	local endpoint0 = if part0 then part0:GetFullName() else "missing attachment/part 0"
-	local endpoint1 = if part1 then part1:GetFullName() else "missing attachment/part 1"
-	print(
-		`[FirstPerson] {label}: class={joint.ClassName}, path={joint:GetFullName()}, `
-			.. `endpoints=({endpoint0}) -> ({endpoint1})`
-	)
-end
 
 local function disconnectConnections(connections: {RBXScriptConnection})
 	for _, connection in connections do
@@ -257,6 +184,14 @@ function Controller.SetEnabled(self: any, enabled: boolean)
 	desiredBodyOffset = 0
 
 	self:_resetPose()
+end
+
+function Controller.GetLookPitch(_self: any): number
+	return math.clamp(smoothedPitch, -Config.LookBend.MaximumPitch, Config.LookBend.MaximumPitch)
+end
+
+function Controller.IsEnabled(self: any): boolean
+	return self.Enabled
 end
 
 function Controller.ToggleForTesting(self: any)
@@ -569,9 +504,10 @@ function Controller._bindCharacter(
 	character:WaitForChild("Head", 10)
 	character:WaitForChild("HumanoidRootPart", 10)
 
-	waist = findPoseJoint(character, {"Waist"}, "LowerTorso", "UpperTorso")
-	neck = findPoseJoint(character, {"Neck"}, "UpperTorso", "Head")
-	rootMotor = findPoseJoint(character, {"Root", "RootJoint"}, "HumanoidRootPart", "LowerTorso")
+	local joints = PoseJointUtil.Resolve(character, true)
+	waist = joints.Waist
+	neck = joints.Neck
+	rootMotor = joints.Root
 
 	local foundRoot =
 		character:FindFirstChild("HumanoidRootPart")
@@ -612,9 +548,9 @@ function Controller._bindCharacter(
 		local activeRoot = rootPart
 		local activeHumanoid = humanoid
 
-		describeJoint("Waist", activeWaist)
-		describeJoint("Neck", activeNeck)
-		describeJoint("Root", activeRootMotor)
+		print(`[FirstPerson] {PoseJointUtil.Describe("Waist", activeWaist)}`)
+		print(`[FirstPerson] {PoseJointUtil.Describe("Neck", activeNeck)}`)
+		print(`[FirstPerson] {PoseJointUtil.Describe("Root", activeRootMotor)}`)
 		print(`[FirstPerson] RootPart={if activeRoot then activeRoot:GetFullName() else "missing"}, Humanoid={if activeHumanoid then activeHumanoid:GetFullName() else "missing"}`)
 	end
 
@@ -664,7 +600,7 @@ function Controller.Start(self: any)
 
 	RunService:BindToRenderStep(
 		"FirstPersonVisibleBody",
-		Enum.RenderPriority.Camera.Value + 2,
+		Enum.RenderPriority.Camera.Value + 1,
 		function(dt: number)
 			self:_updateBody(dt)
 		end
