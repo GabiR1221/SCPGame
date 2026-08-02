@@ -1,0 +1,252 @@
+--!strict
+-- ModuleScript: ReplicatedStorage/Shared/FootstepConfig
+-- Every list below is independent. Replace each rbxassetid://0 with an audio
+-- asset owned by (or explicitly shared with) the experience owner/group.
+local function profile(walk:{string},run:{string},crouch:{string},land:{string},volume:number,pitch:number)
+	return {VolumeMultiplier=volume,PitchMultiplier=pitch,Walk=walk,Run=run,Crouch=crouch,Land=land}
+end
+local EMPTY={"rbxassetid://0","rbxassetid://0","rbxassetid://0"}
+local function empty():{string} return table.clone(EMPTY) end
+
+return table.freeze({
+	PoolSize=12, VoicesPerSound=2, MaxDistance=65, RayLength=5, MinHorizontalSpeed=.8,
+	Volume=.45, PitchMin=.94, PitchMax=1.06,
+	MarkerStyle="Separate", -- "Combined" = Footstep values Left/Right; "Separate" = FootstepLeft/Right
+	MinimumStepInterval=.12, PreloadBatchSize=12, MaximumPreloadedSounds=256,
+	MarkerFallbackEnabled=true, FallbackUpdateInterval=.05,
+	FallbackIntervals={Walk=.46,Run=.28,Crouch=.62}, Debug=true,
+	MaterialProfiles={
+		Wood="Wood", WoodPlanks="Wood",
+		Carpet="Carpet", Fabric="Carpet",
+		Concrete="Concrete", Brick="Concrete", Cobblestone="Concrete", Asphalt="Concrete",
+		Metal="Metal", DiamondPlate="Metal", CorrodedMetal="Metal", Foil="Metal",
+		Tile="Tile", CeramicTiles="Tile", Marble="Tile", Granite="Tile",
+		Glass="Glass", Ice="Glass",
+		Grass="Grass", LeafyGrass="Grass",
+		Ground="Dirt", Mud="Dirt", Sand="Dirt", Sandstone="Dirt", Snow="Dirt", Salt="Dirt",
+		Water="Water",
+	},
+	Profiles={
+		-- Arguments are always: Walk, Run, Crouch, Land, volume, pitch.
+		Wood=profile(
+			{
+				"rbxassetid://88348984187911",
+				"rbxassetid://88348984187911",
+				"rbxassetid://88348984187911",
+			},
+			{
+				"rbxassetid://88348984187911",
+				"rbxassetid://88348984187911",
+				"rbxassetid://88348984187911",
+			},
+			{
+				"rbxassetid://88348984187911",
+				"rbxassetid://88348984187911",
+			},
+			{
+				"rbxassetid://88348984187911",
+				"rbxassetid://88348984187911",
+			},
+			1.00,
+			0.98
+		),
+		Carpet=profile(
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			1.00,
+			0.98
+		),
+		Concrete=profile(
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			1.00,
+			0.98
+		),
+		Metal=profile(
+			{
+				"rbxassetid://114470495002971",
+				"rbxassetid://114470495002971",
+				"rbxassetid://114470495002971",
+			},
+			{
+				"rbxassetid://114470495002971",
+				"rbxassetid://114470495002971",
+				"rbxassetid://114470495002971",
+			},
+			{
+				"rbxassetid://114470495002971",
+				"rbxassetid://114470495002971",
+			},
+			{
+				"rbxassetid://114470495002971",
+				"rbxassetid://114470495002971",
+			},
+			1.00,
+			0.98
+		),
+		Tile=profile(
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			1.00,
+			0.98
+		),
+		Glass=profile(
+			{
+				"rbxassetid://125984201793824",
+				"rbxassetid://125984201793824",
+				"rbxassetid://125984201793824",
+			},
+			{
+				"rbxassetid://125984201793824",
+				"rbxassetid://125984201793824",
+				"rbxassetid://125984201793824",
+			},
+			{
+				"rbxassetid://125984201793824",
+				"rbxassetid://125984201793824",
+			},
+			{
+				"rbxassetid://125984201793824",
+				"rbxassetid://125984201793824",
+			},
+			1.00,
+			0.98
+		),
+		Grass=profile(
+			{
+				"rbxassetid://113401689605648",
+				"rbxassetid://113401689605648",
+				"rbxassetid://113401689605648",
+			},
+			{
+				"rbxassetid://113401689605648",
+				"rbxassetid://113401689605648",
+				"rbxassetid://113401689605648",
+			},
+			{
+				"rbxassetid://113401689605648",
+				"rbxassetid://113401689605648",
+			},
+			{
+				"rbxassetid://113401689605648",
+				"rbxassetid://113401689605648",
+			},
+			1.00,
+			0.98
+		),
+		Dirt=profile(
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			1.00,
+			0.98
+		),
+		Water=profile(
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			1.00,
+			0.98
+		),
+		Default=profile(
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			{
+				"rbxassetid://93434680617901",
+				"rbxassetid://93434680617901",
+			},
+			1.00,
+			0.98
+		),
+	},
+})
