@@ -11,8 +11,8 @@ local Controller={}; Controller.__index=Controller
 
 type ToolRecord={Connections:{RBXScriptConnection}}
 
-function Controller.new(animationController:any):any
-	return setmetatable({Animation=animationController,Records={} :: {[Tool]:ToolRecord},
+function Controller.new(animationController:any,viewmodelController:any):any
+	return setmetatable({Animation=animationController,Viewmodel=viewmodelController,Records={} :: {[Tool]:ToolRecord},
 		ContainerConnections={} :: {RBXScriptConnection},Equipped=nil,Generation=0},Controller)
 end
 
@@ -20,13 +20,14 @@ function Controller._unregister(self:any,tool:Tool)
 	local record:ToolRecord?=self.Records[tool]; if record==nil then return end
 	for _,connection in record.Connections do connection:Disconnect() end
 	self.Records[tool]=nil
-	if self.Equipped==tool then self.Generation+=1; self.Equipped=nil; self.Animation:ClearToolAnimations() end
+	if self.Equipped==tool then self.Generation+=1; self.Equipped=nil; self.Animation:ClearToolAnimations(); self.Viewmodel:Clear() end
 end
 
 function Controller._equipped(self:any,tool:Tool,toolId:string,definition:any)
 	if tool.Parent~=LocalPlayer.Character then return end
 	local previous:Tool?=self.Equipped; if previous and previous~=tool then self.Animation:ClearToolAnimations() end
 	self.Generation+=1; local generation:number=self.Generation; self.Equipped=tool
+	self.Viewmodel:SetEquippedTool(tool,toolId)
 	self.Animation:ClearToolAnimations(); local track:AnimationTrack?=self.Animation:PlayToolAction(definition.EquipAnimation)
 	local delayTime:number=definition.EquipFallbackDuration
 	if track and track.Length>0 then delayTime=math.min(track.Length,2) end
@@ -34,12 +35,14 @@ function Controller._equipped(self:any,tool:Tool,toolId:string,definition:any)
 		local equipped:Tool?=self.Equipped
 		if self.Generation~=generation or equipped~=tool or tool.Parent~=LocalPlayer.Character then return end
 		self.Animation:SetToolIdle(definition.IdleAnimation)
+		self.Viewmodel:SetIdle(definition.Viewmodel.IdleAnimation)
 	end)
 end
 
 function Controller._unequipped(self:any,tool:Tool,definition:any)
 	if self.Equipped~=tool then return end
 	self.Generation+=1; self.Equipped=nil; self.Animation:ClearToolAnimations()
+	self.Viewmodel:Unequip(tool)
 	self.Animation:PlayToolAction(definition.UnequipAnimation)
 end
 
@@ -72,6 +75,7 @@ end
 function Controller._rebind(self:any)
 	for _,connection in self.ContainerConnections do connection:Disconnect() end; table.clear(self.ContainerConnections)
 	self.Generation+=1; self.Equipped=nil; self.Animation:ClearToolAnimations()
+	self.Viewmodel:Clear()
 	local backpack=LocalPlayer:WaitForChild("Backpack",10); if backpack then self:_observeContainer(backpack) end
 	local character=LocalPlayer.Character; if character then self:_observeContainer(character) end
 end
@@ -86,6 +90,7 @@ function Controller.Start(self:any)
 		local toolIdValue=toolValue:GetAttribute("ToolId"); if typeof(toolIdValue)~="string" or message.ToolId~=toolIdValue then return end
 		local definition:any=Config.Tools[toolIdValue]; if definition==nil or message.AnimationKey~=definition.PrimaryAnimation then return end
 		self.Animation:PlayToolAction(definition.PrimaryAnimation)
+		self.Viewmodel:PlayAction(definition.Viewmodel.PrimaryAnimation)
 	end)
 	self:_rebind()
 end
