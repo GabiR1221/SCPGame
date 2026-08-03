@@ -93,6 +93,18 @@ local function poseAwarePosition(cameraCFrame: CFrame, dt: number): Vector3?
 			local allowed = math.max(0, hit.Distance - Config.PoseAwareCamera.WallPadding)
 			desired = eyePosition + displacement.Unit * allowed
 		end
+		-- The animated Head can already be partly through a wall before the short
+		-- eye-clearance ray begins. Sweep a camera-sized sphere from a stable point
+		-- inside the server collision capsule to the desired eye position.
+		local rootValue=activeCharacter:FindFirstChild("HumanoidRootPart")
+		if rootValue and rootValue:IsA("BasePart") then
+			local anchor=rootValue.CFrame:PointToWorldSpace(Config.PoseAwareCamera.WallCollisionAnchorLocalOffset)
+			local anchorDisplacement=desired-anchor
+			if anchorDisplacement.Magnitude>.001 then
+				local wallHit=workspace:Spherecast(anchor,Config.PoseAwareCamera.WallCollisionRadius,anchorDisplacement,raycastParams)
+				if wallHit then local allowed=math.max(0,wallHit.Distance-Config.PoseAwareCamera.WallPadding); desired=anchor+anchorDisplacement.Unit*allowed end
+			end
+		end
 	end
 	return desired
 end
@@ -137,6 +149,7 @@ end
 function Controller.SetScriptCFrame(_self: unknown, requestedOwner: string, value: CFrame?) if owner == requestedOwner then scriptCFrame = value end end
 function Controller.SetFov(_self: unknown, requestedOwner: string, value: number) if not owner or owner == requestedOwner then targetFov = math.clamp(value, 30, 100) end end
 function Controller.AddShake(_self: unknown, amount: Vector3) if Config.Camera.ShakeEnabled then shake += amount end end
+function Controller.IsGameplayCamera(_self: unknown): boolean return owner==nil and mode=="Gameplay" and scriptCFrame==nil end
 function Controller.Restore(_self: unknown)
 	mode = "Gameplay"; scriptCFrame = nil; targetFov = baseFov; resetSmoothing()
 	local camera = workspace.CurrentCamera
