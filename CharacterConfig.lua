@@ -12,6 +12,7 @@ return table.freeze({
 	LookPoseReplication = table.freeze({Enabled=true, SendRate=15, MinimumPitchDelta=math.rad(1), HeartbeatInterval=.3, RemoteSmoothSpeed=12, RemotePoseTimeout=.75, MaximumAcceptedUpdatesPerSecond=25, MaximumRenderDistance=180}),
 	-- The eye offset follows the animated/bent Head. Conservative asymmetric
 	-- clearance keeps the camera ahead of the chest without changing its rotation.
-	PoseAwareCamera = table.freeze({Enabled=true, EyeLocalOffset=Vector3.new(0,.14,-.45), BaseForwardClearance=.17, DownForwardBonus=.34, UpForwardBonus=.28, DownVerticalCompensation=.08, UpVerticalCompensation=.1, PositionSmoothSpeed=24, PreventWallClipping=true, WallPadding=.08, UseSyntheticHeadBob=false}),
+	PoseAwareCamera = table.freeze({Enabled=true, EyeLocalOffset=Vector3.new(0,.14,-.45), BaseForwardClearance=.17, DownForwardBonus=.34, UpForwardBonus=.28, DownVerticalCompensation=.08, UpVerticalCompensation=.1, PositionSmoothSpeed=24, PreventWallClipping=true, WallPadding=.08, WallCollisionRadius=.35, WallCollisionAnchorLocalOffset=Vector3.new(0,1.4,0), UseSyntheticHeadBob=false}),
+	CollisionCapsule = table.freeze({Enabled=true,CollisionGroup="PlayerCapsule",Radius=1.5,CylinderHeight=3,CenterOffset=Vector3.new(0, 1.3, 0),Transparency=1,DebugVisible=true}),
 	Debug = false,
 })
