@@ -50,7 +50,19 @@ function Service._validateStructure(_self:any,tool:Tool,toolId:string,warnOnFail
 	local handle=tool:FindFirstChild("Handle"); if not handle or not handle:IsA("BasePart") then return invalid("missing BasePart named Handle") end
 	local attachment=handle:FindFirstChild("LightAttachment"); if not attachment or not attachment:IsA("Attachment") then return invalid("missing Handle.LightAttachment Attachment") end
 	local light=attachment:FindFirstChild("SpotLight"); if not light or not light:IsA("SpotLight") then return invalid("missing Handle.LightAttachment.SpotLight") end
+	local defaults:any=definition.LightDefaults
+	if warnOnFailure and light.Enabled then return invalid("SpotLight.Enabled must start false in the template") end
+	if light.Brightness<=0 then return invalid("SpotLight.Brightness must be greater than zero") end
+	if light.Range<=0 then return invalid("SpotLight.Range must be greater than zero") end
+	if light.Angle<=0 or light.Angle>180 then return invalid("SpotLight.Angle must be greater than 0 and no more than 180") end
+	if defaults and light.Face~=defaults.Face then return invalid(`SpotLight.Face must be {defaults.Face.Name} for the configured lens convention`) end
 	return true
+end
+
+function Service._applyLightDefaults(_self:any,light:SpotLight,definition:any)
+	local defaults:any=definition.LightDefaults; if defaults==nil then return end
+	light.Face=defaults.Face; light.Brightness=defaults.Brightness; light.Range=defaults.Range
+	light.Angle=defaults.Angle; light.Shadows=defaults.Shadows; light.Color=defaults.Color; light.Enabled=false
 end
 
 function Service._disable(self:any,tool:Tool,toolId:string)
@@ -76,7 +88,7 @@ function Service._give(self:any,player:Player,toolId:string)
 	if not template or not template:IsA("Tool") then warn(`[ToolService] Missing Tool template ServerStorage.ToolTemplates.{definition.TemplateName}`); return end
 	if not self:_validateStructure(template,toolId,true) then return end
 	local clone=template:Clone(); clone:SetAttribute("Active",false)
-	local light=resolvePath(clone,definition.LightPath); if light and light:IsA("SpotLight") then light.Enabled=false end
+	local light=resolvePath(clone,definition.LightPath); if light and light:IsA("SpotLight") then self:_applyLightDefaults(light,definition) end
 	self:_registerClone(clone,toolId,player); clone.Parent=backpack
 end
 
@@ -89,7 +101,12 @@ end
 function Service._stillValid(self:any,player:Player,tool:Tool,toolId:string):boolean
 	local character=player.Character
 	local approval:Approval?=self.Approved[tool]
-	return character~=nil and tool.Parent==character and approval~=nil and approval.ToolId==toolId and approval.Owner==player and self.States:CanUseTools(player) and self:_validateStructure(tool,toolId,false)
+	if character==nil or tool.Parent~=character or approval==nil or approval.ToolId~=toolId or approval.Owner~=player or not self.States:CanUseTools(player) or not self:_validateStructure(tool,toolId,false) then return false end
+	local definition:any=Config.Tools[toolId]; local light=if definition then resolvePath(tool,definition.LightPath) else nil
+	if not light or not light:IsA("SpotLight") then return false end
+	local attachment=light.Parent; if not attachment or not attachment:IsA("Attachment") then return false end
+	local lightPart=attachment.Parent
+	return lightPart~=nil and lightPart:IsA("BasePart") and lightPart:IsDescendantOf(workspace)
 end
 
 function Service._primary(self:any,player:Player,value:Instance)
