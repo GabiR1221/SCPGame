@@ -9,11 +9,12 @@ local EMPTY={"rbxassetid://0","rbxassetid://0","rbxassetid://0"}
 local function empty():{string} return table.clone(EMPTY) end
 
 return table.freeze({
-	PoolSize=12, VoicesPerSound=2, MaxDistance=65, RayLength=5, MinHorizontalSpeed=.8,
+	PoolSize=12, VoicesPerSound=2, MaxDistance=65, RayLength=5, RayOriginLift=.15, MinHorizontalSpeed=.8,
 	Volume=.45, PitchMin=.94, PitchMax=1.06,
 	MarkerStyle="Separate", -- "Combined" = Footstep values Left/Right; "Separate" = FootstepLeft/Right
 	MinimumStepInterval=.12, PreloadBatchSize=12, MaximumPreloadedSounds=256,
 	MarkerFallbackEnabled=true, FallbackUpdateInterval=.05, MarkerFallbackSilenceTimeout=.9,
+	Preloading=table.freeze({PrecreateVoices=true,UseLoadedFallback=true,InitialFallbackProfile="Default",MaximumInitialWait=5,Debug=false}),
 	FallbackIntervals={Walk=.46,Run=.28,Crouch=.62}, Debug=false,
 	MaterialProfiles={
 		Wood="Wood", WoodPlanks="Wood",
