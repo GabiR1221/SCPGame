@@ -62,6 +62,9 @@ local LookPoseService=require(Services.LookPoseService)
 local toolServiceModule=Services:WaitForChild("ToolService")
 assert(toolServiceModule:IsA("ModuleScript"),"ServerScriptService.Services.ToolService must be a ModuleScript")
 local ToolService:any=require(toolServiceModule).new(PlayerStateService,toolActionRequest,toolStateChanged)
+local collisionServiceModule=Services:WaitForChild("CharacterCollisionService")
+assert(collisionServiceModule:IsA("ModuleScript"),"ServerScriptService.Services.CharacterCollisionService must be a ModuleScript")
+local CharacterCollisionService:any=require(collisionServiceModule).new()
 require(Services.PlayerFrameworkRoomBridge).Connect(Lifecycle,InteractionService,CutsceneService)
 
 -- Safe starter handlers. Replace attribute mutations with calls into your item/door
@@ -69,7 +72,7 @@ require(Services.PlayerFrameworkRoomBridge).Connect(Lifecycle,InteractionService
 InteractionService:RegisterHandler("OpenDrawer",function(player:Player,target:Instance) DrawerService:Open(player,target) end)
 InteractionService:RegisterHandler("PullLever",function(_player:Player,target:Instance) target:SetAttribute("Pulled",true) end)
 InteractionService:RegisterHandler("PressButton",function(_player:Player,target:Instance) target:SetAttribute("PressedAt",workspace:GetServerTimeNow()) end)
-PlayerStateService:Start(); NoiseService:Start(); InteractionService:Start(interactionRequest); CutsceneService:Start(); CharacterService:Start(); CrouchService:Start(crouchRequest); LookPoseService.Start(lookPoseUpdate); ToolService:Start()
+PlayerStateService:Start(); NoiseService:Start(); InteractionService:Start(interactionRequest); CutsceneService:Start(); CharacterService:Start(); CharacterCollisionService:Start(); CrouchService:Start(crouchRequest); LookPoseService.Start(lookPoseUpdate); ToolService:Start()
 
 local valid: boolean,errors: {string}=Registry:Scan()
 if not valid then error(`[Main] Room template validation failed with {#errors} error(s); correct every warning above`) end
