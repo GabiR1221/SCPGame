@@ -7,7 +7,7 @@ local function recentDistance(history: {string}, id: string): number?
 	return nil
 end
 local function consecutive(history: {string}, id: string): number local n=0; for i=#history,1,-1 do if history[i]~=id then break end; n+=1 end; return n end
-function RoomSelector.Select(self: any,run: any, depth: number, requiredEntrance: string?, excluded: {[string]: boolean}?): (any?, any)
+function RoomSelector.Select(self: any,run: any, depth: number, requiredEntrance: string?, excluded: {[string]: boolean}?, placementRecovery: boolean?): (any?, any)
 	local debugInfo: any = { ValidCandidates={} :: {any}, RejectedCandidates={} :: {any}, SelectedTemplate=nil }
 	local scheduled = run.ScheduledSpecialRooms[depth]
 	local mandatory = self.Config.MandatoryRooms[depth]
@@ -21,8 +21,11 @@ function RoomSelector.Select(self: any,run: any, depth: number, requiredEntrance
 		elseif template.IsUnique and run.UsedUniqueRooms[template.Id] then reason="unique room already used"
 		else
 			local distance = recentDistance(run.RoomHistory, template.Id)
-			if distance and distance < template.CooldownRooms then reason=`cooldown: last used {distance} rooms ago`
-			elseif consecutive(run.RoomHistory, template.Id) >= template.MaxConsecutive then reason="MaxConsecutive reached"
+			-- Cooldowns shape normal selection, but must not make placement retries
+			-- impossible after a different template's Bounds failed. Recovery still
+			-- honors theme, depth, connectors, uniqueness and scheduled rooms.
+			if not placementRecovery and distance and distance < template.CooldownRooms then reason=`cooldown: last used {distance} rooms ago`
+			elseif not placementRecovery and consecutive(run.RoomHistory, template.Id) >= template.MaxConsecutive then reason="MaxConsecutive reached"
 			elseif mandatory and template.Id ~= mandatory then reason=`mandatory room is {mandatory}`
 			elseif scheduled and ((scheduled.RoomId and template.Id ~= scheduled.RoomId) or (scheduled.Category and template.Category ~= scheduled.Category)) then reason=`scheduled {scheduled.Kind} room required`
 			elseif scheduled and scheduled.Requires and not run.Prerequisites[scheduled.Requires] then reason=`missing prerequisite {scheduled.Requires}` end
@@ -33,7 +36,7 @@ function RoomSelector.Select(self: any,run: any, depth: number, requiredEntrance
 		else
 			local difficultyDelta = math.abs(template.Difficulty-targetDifficulty)
 			local difficultyMultiplier = 1 / (1 + difficultyDelta / self.Config.Difficulty.Tolerance)
-			local repeatMultiplier = if run.RoomHistory[#run.RoomHistory] == template.Id then self.Config.ImmediateRepeatMultiplier else 1
+			local repeatMultiplier = if not placementRecovery and run.RoomHistory[#run.RoomHistory] == template.Id then self.Config.ImmediateRepeatMultiplier else 1
 			local darkMultiplier = if template.CanBeDark then self.Config.DarkRoomWeightMultiplier else 1
 			local adjusted = template.Weight * pacingMultiplier * difficultyMultiplier * repeatMultiplier * darkMultiplier
 			if adjusted > 0 then table.insert(debugInfo.ValidCandidates, { Template=template, Id=template.Id, BaseWeight=template.Weight, AdjustedWeight=adjusted }) else table.insert(debugInfo.RejectedCandidates,{Id=template.Id,Reason="adjusted weight is zero",BaseWeight=template.Weight,AdjustedWeight=0}) end
