@@ -47,4 +47,5 @@ function Tracker.GetLowestActive(self:any,defaultIndex:number):number
 	end
 	return lowest or defaultIndex
 end
+function Tracker.GetPlayerRoom(self:any,player:Player):number? return self.Indexes[player] end
 return Tracker
