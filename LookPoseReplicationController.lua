@@ -10,7 +10,12 @@ if player == nil then error("LookPoseReplicationController must run on the clien
 local LocalPlayer: Player = player
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CharacterConfig"))
 local PoseJointUtil = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PoseJointUtil"))
-local FirstPerson = require(script.Parent:WaitForChild("FirstPersonController"))
+type FirstPersonController = {
+	IsEnabled: (FirstPersonController) -> boolean,
+	GetLookPitch: (FirstPersonController) -> number,
+	IsBodyPoseEnabled: ((FirstPersonController) -> boolean)?,
+}
+local FirstPerson = require(script.Parent:WaitForChild("FirstPersonController")) :: FirstPersonController
 
 type PoseJoint = Motor6D | AnimationConstraint
 type RemoteState = {
@@ -89,7 +94,13 @@ local function send(dt: number)
 	local interval = 1 / Config.LookPoseReplication.SendRate
 	if sendAccumulator < interval then return end
 	sendAccumulator %= interval
-	local pitch: number = if FirstPerson:IsEnabled() then FirstPerson:GetLookPitch() else 0
+	local bodyPoseEnabled = true
+	local isBodyPoseEnabled = FirstPerson.IsBodyPoseEnabled
+	if typeof(isBodyPoseEnabled) == "function" then
+		bodyPoseEnabled = isBodyPoseEnabled(FirstPerson)
+	end
+
+	local pitch: number = if FirstPerson:IsEnabled() and bodyPoseEnabled then FirstPerson:GetLookPitch() else 0
 	local now = os.clock()
 	if math.abs(pitch - lastSentPitch) < Config.LookPoseReplication.MinimumPitchDelta
 		and now - lastSentAt < Config.LookPoseReplication.HeartbeatInterval then return end
