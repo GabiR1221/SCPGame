@@ -16,6 +16,8 @@ local PoseJointUtil = require(ReplicatedStorage:WaitForChild("Shared"):WaitForCh
 
 local Controller = {}
 Controller.__index = Controller
+Controller.Enabled = true
+Controller.BodyPoseEnabled = true
 
 local visibleParts: {[BasePart]: boolean} = {}
 
@@ -49,6 +51,12 @@ local waistLayer = CFrame.identity
 local neckLayer = CFrame.identity
 local rootLayer = CFrame.identity
 
+local function isBodyPoseEnabled(self: any): boolean
+	if self.BodyPoseEnabled == false then
+		return false
+	end
+	return LocalPlayer:GetAttribute("FirstPersonBodyPoseEnabled") ~= false
+end
 
 local function disconnectConnections(connections: {RBXScriptConnection})
 	for _, connection in connections do
@@ -130,6 +138,9 @@ end
 
 function Controller._claimAutoRotate(self: any)
 	if not self.Enabled then
+		return
+	end
+	if not isBodyPoseEnabled(self) then
 		return
 	end
 
@@ -392,7 +403,7 @@ function Controller._resetPose(_self: any)
 end
 
 function Controller._applyPose(self: any)
-	if not self.Enabled then
+	if not self.Enabled or not isBodyPoseEnabled(self) then
 		return
 	end
 
