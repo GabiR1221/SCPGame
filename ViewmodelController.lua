@@ -19,7 +19,7 @@ end
 function Controller.new(cameraController:any,firstPersonController:any):any
 	local params=RaycastParams.new(); params.FilterType=Enum.RaycastFilterType.Exclude; params.IgnoreWater=true
 	return setmetatable({CameraController=cameraController,FirstPerson=firstPersonController,EquippedTool=nil,
-		ToolId=nil,Model=nil,Root=nil,Attachment=nil,ViewLight=nil,WorldLight=nil,WorldLightWasEnabled=false,
+		ToolId=nil,Model=nil,Root=nil,AimRoot=nil,Attachment=nil,ViewLight=nil,WorldLight=nil,WorldLightWasEnabled=false,
 		Visibility={} :: {[BasePart]:number},Tracks={} :: {[string]:AnimationTrack},IdleTrack=nil,
 		DesiredIdleKey=nil,
 		Connections={} :: {RBXScriptConnection},RaycastParams=params,Generation=0,Removing=false,
@@ -44,7 +44,7 @@ function Controller._deactivate(self:any)
 	for _,track:AnimationTrack in self.Tracks do track:Stop(0); track:Destroy() end
 	table.clear(self.Tracks); self.IdleTrack=nil
 	local model:Model?=self.Model; if model then model:Destroy() end
-	self.Model=nil; self.Root=nil; self.Attachment=nil; self.ViewLight=nil; self.Removing=false
+	self.Model=nil; self.Root=nil; self.AimRoot=nil; self.Attachment=nil; self.ViewLight=nil; self.Removing=false
 end
 
 function Controller._warnOnce(self:any,key:string,message:string)
@@ -123,7 +123,6 @@ function Controller._loadTracks(self:any,model:Model,definition:any)
 	if foundAnimator then animator=foundAnimator else local createdAnimator=Instance.new("Animator"); createdAnimator.Parent=animationController; animator=createdAnimator end
 	for _,key in {definition.EquipAnimation,definition.IdleAnimation,definition.PrimaryAnimation,definition.UnequipAnimation} do
 		local animationDefinition:any=AnimationConfig.Animations[key]
-		if (animationDefinition==nil or animationDefinition.Id=="" or animationDefinition.Id=="rbxassetid://0") and definition.AnimationFallbacks then local fallbackKey:any=definition.AnimationFallbacks[key]; if typeof(fallbackKey)=="string" then animationDefinition=AnimationConfig.Animations[fallbackKey] end end
 		if animationDefinition and animationDefinition.Id~="" and animationDefinition.Id~="rbxassetid://0" then
 			local animation=Instance.new("Animation"); animation.Name=key; animation.AnimationId=animationDefinition.Id
 			local track=animator:LoadAnimation(animation); animation:Destroy(); track.Name=key
@@ -151,9 +150,7 @@ function Controller._activate(self:any):boolean
 	local root=model.PrimaryPart; if root==nil then local candidate=model:FindFirstChild(viewDefinition.RootName); if candidate and candidate:IsA("BasePart") then root=candidate; model.PrimaryPart=candidate end end
 	if root==nil then model:Destroy(); self.Unavailable=true; self:_warnOnce(`{toolId}:Root`,`[ViewmodelController] {source:GetFullName()} needs a PrimaryPart or BasePart named {viewDefinition.RootName}`); return false end
 	local character=LocalPlayer.Character
-	local rigBuilt=if character then self:_buildCharacterRig(model,root,tool,character,viewDefinition) else false
-	if viewDefinition.BuildArmsFromCharacter and not rigBuilt then model:Destroy(); self.Unavailable=true; return false end
-	for _,descendant in model:GetDescendants() do if descendant:IsA("BasePart") then descendant.CanCollide=false; descendant.CanTouch=false; descendant.CanQuery=false; descendant.CastShadow=false; descendant.Massless=true end end
+	for _,descendant in model:GetDescendants() do if descendant:IsA("BasePart") then descendant.CanCollide=false; descendant.CanTouch=false; descendant.CanQuery=false; descendant.CastShadow=false; descendant.Massless=true; if descendant==root then descendant.Transparency=1 end end end
 	root.Anchored=true
 	local lightValue=resolvePath(model,viewDefinition.LightPath)
 	if not lightValue or not lightValue:IsA("SpotLight") then model:Destroy(); self.Unavailable=true; self:_warnOnce(`{toolId}:Light`,`[ViewmodelController] Viewmodel is missing configured LightAttachment.SpotLight path`); return false end
@@ -161,15 +158,16 @@ function Controller._activate(self:any):boolean
 	if not attachmentParent or not attachmentParent:IsA("Attachment") then model:Destroy(); self.Unavailable=true; self:_warnOnce(`{toolId}:Attachment`,`[ViewmodelController] Viewmodel SpotLight must be parented to an Attachment`); return false end
 	local attachmentPart=attachmentParent.Parent
 	if not attachmentPart or not attachmentPart:IsA("BasePart") then model:Destroy(); self.Unavailable=true; self:_warnOnce(`{toolId}:LightPart`,`[ViewmodelController] Viewmodel LightAttachment must be parented to a BasePart`); return false end
+	local aimRootValue=model:FindFirstChild(viewDefinition.AimRootName or "AimRoot")
+	local aimRoot:BasePart=if aimRootValue and aimRootValue:IsA("BasePart") then aimRootValue else attachmentPart
+	aimRoot.Anchored=true; aimRoot.Transparency=1
 	local camera=Workspace.CurrentCamera; if camera==nil then model:Destroy(); return false end
 	model.Parent=camera; model:PivotTo(camera.CFrame*viewDefinition.Offset)
-	self.Model=model; self.Root=root; self.Attachment=attachmentParent; self.ViewLight=lightValue
+	self.Model=model; self.Root=root; self.AimRoot=aimRoot; self.Attachment=attachmentParent; self.ViewLight=lightValue
 	local defaults:any=definition.LightDefaults
 	if defaults then lightValue.Face=defaults.Face; lightValue.Brightness=defaults.Brightness; lightValue.Range=defaults.Range; lightValue.Angle=defaults.Angle; lightValue.Shadows=defaults.Shadows; lightValue.Color=defaults.Color end
 	lightValue.Face=definition.FlashlightAim.ExpectedFace; lightValue.Enabled=tool:GetAttribute("Active")==true
 	self:_loadTracks(model,viewDefinition)
-	local replacementArm=false
-	for _,name in {"RightUpperArm","RightLowerArm","RightHand"} do local part=model:FindFirstChild(name,true); if part and part:IsA("BasePart") then replacementArm=true; break end end
 	if viewDefinition.HideWorldTool then for _,descendant in tool:GetDescendants() do if descendant:IsA("BasePart") then self:_hidePart(descendant) end end end
 	if character and viewDefinition.CopyCharacterArmColors then
 		for _,name in {"RightUpperArm","RightLowerArm","RightHand"} do local characterPart=character:FindFirstChild(name); local viewPart=model:FindFirstChild(name,true); if characterPart and characterPart:IsA("BasePart") and viewPart and viewPart:IsA("BasePart") then viewPart.Color=characterPart.Color end end
@@ -178,7 +176,7 @@ function Controller._activate(self:any):boolean
 		for _,child in model:GetChildren() do if child:IsA("Shirt") then child:Destroy() end end
 		local shirt=character:FindFirstChildOfClass("Shirt"); if shirt then local clonedShirt=shirt:Clone(); clonedShirt.Parent=model end
 	end
-	if replacementArm and viewDefinition.HideWorldRightArm and character then for _,name in {"RightUpperArm","RightLowerArm","RightHand"} do local part=character:FindFirstChild(name); if part and part:IsA("BasePart") then self:_hidePart(part) end end end
+	if viewDefinition.HideWorldRightArm and character then for _,name in {"RightUpperArm","RightLowerArm","RightHand"} do local part=character:FindFirstChild(name); if part and part:IsA("BasePart") then self:_hidePart(part) end end end
 	local worldLightValue=resolvePath(tool,definition.LightPath)
 	if worldLightValue and worldLightValue:IsA("SpotLight") then self.WorldLight=worldLightValue; self.WorldLightWasEnabled=worldLightValue.Enabled; worldLightValue.Enabled=false; table.insert(self.Connections,worldLightValue:GetPropertyChangedSignal("Enabled"):Connect(function() if self.Model~=nil and worldLightValue.Enabled then worldLightValue.Enabled=false end end)) end
 	table.insert(self.Connections,tool:GetAttributeChangedSignal("Active"):Connect(function() local viewLight:SpotLight?=self.ViewLight; if viewLight then viewLight.Enabled=tool:GetAttribute("Active")==true end end))
@@ -228,6 +226,10 @@ function Controller._render(self:any)
 	if camera==nil or model==nil or toolId==nil then return end
 	local definition:any=ToolConfig.Tools[toolId]; if definition==nil then return end
 	model:PivotTo(camera.CFrame*definition.Viewmodel.Offset)
+	local aimRoot:BasePart?=self.AimRoot
+	if aimRoot and aimRoot.Parent~=nil then
+		aimRoot.CFrame=camera.CFrame*(definition.Viewmodel.LightOriginOffset or CFrame.identity)
+	end
 	for part in self.Visibility do if part.Parent~=nil then part.LocalTransparencyModifier=1 end end
 	local worldLight:SpotLight?=self.WorldLight; if worldLight and worldLight.Enabled then worldLight.Enabled=false end
 	local attachment:Attachment?=self.Attachment; if attachment==nil or not definition.FlashlightAim.Enabled then return end
