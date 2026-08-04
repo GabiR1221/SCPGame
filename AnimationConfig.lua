@@ -20,6 +20,10 @@ return table.freeze({
 		CrouchIdle={Id="rbxassetid://128077439819112",Priority=Enum.AnimationPriority.Idle,Looped=true,AuthoredSpeed=1},
 		CrouchWalk={Id="rbxassetid://139089965654151",Priority=Enum.AnimationPriority.Movement,Looped=true,AuthoredSpeed=6},
 		OpenDrawer={Id="rbxassetid://109284362906915",Priority=Enum.AnimationPriority.Action2,Looped=false,AuthoredSpeed=1},
+		CloseDrawer={Id="rbxassetid://109284362906915",Priority=Enum.AnimationPriority.Action2,Looped=false,AuthoredSpeed=1},
+		LockerEnter={Id="rbxassetid://72838676764108",Priority=Enum.AnimationPriority.Action3,Looped=false,AuthoredSpeed=1},
+		LockerIdle={Id="rbxassetid://101403921204911",Priority=Enum.AnimationPriority.Action,Looped=true,AuthoredSpeed=1},
+		LockerExit={Id="rbxassetid://113984487264215",Priority=Enum.AnimationPriority.Action3,Looped=false,AuthoredSpeed=1},
 		PullLever={Id="rbxassetid://109284362906915",Priority=Enum.AnimationPriority.Action2,Looped=false,AuthoredSpeed=1},
 		IntroLook={Id="rbxassetid://109284362906915",Priority=Enum.AnimationPriority.Action3,Looped=false,AuthoredSpeed=1},
 		-- Upper-body-only tool animations; replace zero IDs in Studio when ready.
@@ -28,10 +32,10 @@ return table.freeze({
 		FlashlightUnequip={Id="rbxassetid://118308237201245",Priority=Enum.AnimationPriority.Action2,Looped=false,AuthoredSpeed=1},
 		FlashlightToggle={Id="rbxassetid://129785789637011",Priority=Enum.AnimationPriority.Action2,Looped=false,AuthoredSpeed=1},
 		-- These play only on ReplicatedStorage.ClientAssets.Viewmodels.Flashlight.
-		FlashlightViewmodelEquip={Id="rbxassetid://0",Priority=Enum.AnimationPriority.Action,Looped=false,AuthoredSpeed=1},
-		FlashlightViewmodelIdle={Id="rbxassetid://0",Priority=Enum.AnimationPriority.Idle,Looped=true,AuthoredSpeed=1},
-		FlashlightViewmodelToggle={Id="rbxassetid://0",Priority=Enum.AnimationPriority.Action2,Looped=false,AuthoredSpeed=1},
-		FlashlightViewmodelUnequip={Id="rbxassetid://0",Priority=Enum.AnimationPriority.Action,Looped=false,AuthoredSpeed=1},
-		
+		FlashlightViewmodelEquip={Id="rbxassetid://110714371172299",Priority=Enum.AnimationPriority.Action,Looped=false,AuthoredSpeed=1},
+		FlashlightViewmodelIdle={Id="rbxassetid://90500203310017",Priority=Enum.AnimationPriority.Idle,Looped=true,AuthoredSpeed=1},
+		FlashlightViewmodelToggle={Id="rbxassetid://129785789637011",Priority=Enum.AnimationPriority.Action2,Looped=false,AuthoredSpeed=1},
+		FlashlightViewmodelUnequip={Id="rbxassetid://118308237201245",Priority=Enum.AnimationPriority.Action,Looped=false,AuthoredSpeed=1},
+
 	})
 })
