@@ -1,8 +1,8 @@
 --Modulescript in Services folder in ServerScriptService
 --!strict
 local RunManager={}; RunManager.__index=RunManager
-function RunManager.new(config:any,registry:any,generator:any,lifecycle:any,cleanup:any,tracker:any,pacing:any): any
-	return setmetatable({Config=config,Registry=registry,Generator=generator,Lifecycle=lifecycle,Cleanup=cleanup,Tracker=tracker,Pacing=pacing,State=nil :: any?},RunManager)
+function RunManager.new(config:any,registry:any,generator:any,lifecycle:any,cleanup:any,tracker:any,pacing:any,retention:any): any
+	return setmetatable({Config=config,Registry=registry,Generator=generator,Lifecycle=lifecycle,Cleanup=cleanup,Tracker=tracker,Pacing=pacing,Retention=retention,State=nil :: any?},RunManager)
 end
 function RunManager._theme(self:any,depth:number):string for _,range: any in self.Config.ThemeProgression do if depth>=range.MinDepth and depth<=range.MaxDepth then return range.Theme end end; return "Hotel" end
 function RunManager._schedule(self:any,random:Random):{[number]:any}
@@ -27,8 +27,8 @@ function RunManager.Advance(self:any,player:Player,fromIndex:number)
 	self.Generator:GenerateAhead(run,run.CurrentRoomIndex+self.Config.Generation.RoomsAhead); self:CleanupOldRooms()
 end
 function RunManager.CleanupOldRooms(self:any)
-	local run: any=self.State; assert(run,"no run"); local lowest:number=self.Tracker:GetLowestActive(run.CurrentRoomIndex); local threshold:number=lowest-self.Config.Generation.RoomsBehind
-	for index,room in run.ActiveRooms do if index<threshold and next(room.Occupants)==nil then self.Cleanup:Destroy(room); run.ActiveRooms[index]=nil end end
+	local run: any=self.State; assert(run,"no run"); local lowest:number=self.Tracker:GetLowestActive(run.CurrentRoomIndex); local behind=math.max(self.Config.Generation.RoomsBehind,self.Retention:GetBehind()); local threshold:number=lowest-behind
+	for index,room in run.ActiveRooms do if index<threshold and next(room.Occupants)==nil and not self.Retention:IsPinned(index) then self.Cleanup:Destroy(room); run.ActiveRooms[index]=nil end end
 	local activeCount=0; for _ in run.ActiveRooms do activeCount+=1 end
 	if activeCount>self.Config.Generation.MaximumActiveRooms and self.Config.Debug.Enabled then warn(`[RunManager] {activeCount} rooms retained (limit {self.Config.Generation.MaximumActiveRooms}) because a player may still need them`) end
 end
