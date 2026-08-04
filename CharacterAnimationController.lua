@@ -11,7 +11,7 @@ local LocalPlayer = Players.LocalPlayer :: Player
 function Controller.new(): any
 	return setmetatable({Tracks={}, Current=nil, Direction=nil, Character=nil, Humanoid=nil,
 		Animator=nil, Connections={}, StepConnection=nil, ToolIdleKey=nil, ToolIdleTrack=nil,
-		ToolActionTrack=nil, ToolGeneration=0}, Controller)
+		ToolActionTrack=nil, ToolGeneration=0, InteractionTrack=nil, InteractionKey=nil, InteractionGeneration=0}, Controller)
 end
 
 function Controller._cleanup(self: any)
@@ -21,7 +21,7 @@ function Controller._cleanup(self: any)
 	for _, track: AnimationTrack in self.Tracks do track:Stop(0); track:Destroy() end
 	table.clear(self.Tracks)
 	self.Current=nil; self.Direction=nil; self.Character=nil; self.Humanoid=nil; self.Animator=nil
-	self.ToolIdleKey=nil; self.ToolIdleTrack=nil; self.ToolActionTrack=nil
+	self.ToolIdleKey=nil; self.ToolIdleTrack=nil; self.ToolActionTrack=nil; self.InteractionTrack=nil; self.InteractionKey=nil
 end
 
 function Controller._load(self: any, character: Model)
@@ -57,6 +57,31 @@ function Controller.PlayAction(self: any, key: string): AnimationTrack?
 	local definition: any=Config.Animations[key]; local track: AnimationTrack?=self.Tracks[key]
 	if not definition or not track then return nil end
 	track:Play(Config.FadeIn); return track
+end
+
+function Controller.PlayInteractionAction(self: any, key: string, serverStartTime: number?, fallbackDuration: number?): AnimationTrack?
+	local definition: any=Config.Animations[key]
+	local track: AnimationTrack?=self.Tracks[key]
+	if not definition or not track then return nil end
+	local current: AnimationTrack?=self.InteractionTrack
+	if current==track and track.IsPlaying then return track end
+	if current and current~=track then current:Stop(Config.FadeOut) end
+	self.InteractionGeneration += 1
+	self.InteractionTrack=track; self.InteractionKey=key
+	track:Play(Config.FadeIn)
+	local elapsed=0
+	if serverStartTime~=nil then elapsed=math.max(0, workspace:GetServerTimeNow()-serverStartTime) end
+	local length=track.Length
+	local duration=if length>0 then length elseif fallbackDuration~=nil then fallbackDuration else 0
+	if duration>0 then track.TimePosition=math.clamp(elapsed,0,math.max(0,duration-.03)) end
+	return track
+end
+
+function Controller.StopInteractionAction(self: any, fadeTime: number?)
+	self.InteractionGeneration += 1
+	local track: AnimationTrack?=self.InteractionTrack
+	if track then track:Stop(if fadeTime~=nil then fadeTime else Config.FadeOut) end
+	self.InteractionTrack=nil; self.InteractionKey=nil
 end
 
 function Controller.SetToolIdle(self: any, animationKey: string?)
