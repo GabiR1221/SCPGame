@@ -37,5 +37,12 @@ return table.freeze({
 		FlashlightViewmodelToggle={Id="rbxassetid://129785789637011",Priority=Enum.AnimationPriority.Action2,Looped=false,AuthoredSpeed=1},
 		FlashlightViewmodelUnequip={Id="rbxassetid://118308237201245",Priority=Enum.AnimationPriority.Action,Looped=false,AuthoredSpeed=1},
 
+	}),
+	ObjectAnimations=table.freeze({
+		DrawerOpen={Id="rbxassetid://88542616058118",Priority=Enum.AnimationPriority.Action,Looped=false},
+		DrawerClose={Id="rbxassetid://115769042595557",Priority=Enum.AnimationPriority.Action,Looped=false},
+		LockerEnterObject={Id="rbxassetid://99308891064081",Priority=Enum.AnimationPriority.Action,Looped=false},
+		LockerExitObject={Id="rbxassetid://85426657586918",Priority=Enum.AnimationPriority.Action,Looped=false},
 	})
+	
 })
