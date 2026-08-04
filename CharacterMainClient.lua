@@ -7,9 +7,9 @@ local LookPoseReplication=require(controllers:WaitForChild("LookPoseReplicationC
 local Animation=require(controllers:WaitForChild("CharacterAnimationController")).new()
 local Footsteps=require(controllers:WaitForChild("FootstepController")).new()
 local CharacterSounds=require(controllers:WaitForChild("CharacterSoundController")).new()
-local Viewmodel=require(controllers:WaitForChild("ViewmodelController")).new(Camera,FirstPerson)
+local Viewmodel={SetEquippedTool=function() end,SetIdle=function() end,PlayAction=function() return nil end,Unequip=function() end,Clear=function() end,Start=function() end}
 local Tools=require(controllers:WaitForChild("ToolController")).new(Animation,Viewmodel)
-FirstPerson:Start(); Camera:Start(); LookPoseReplication:Start(); Animation:Start(); Footsteps:Start(); CharacterSounds:Start(); Viewmodel:Start(); Tools:Start()
+FirstPerson:Start(); Camera:Start(); LookPoseReplication:Start(); Animation:Start(); Footsteps:Start(); CharacterSounds:Start(); Tools:Start()
 require(controllers:WaitForChild("InputController")).Start(FirstPerson)
 local Hiding=require(controllers:WaitForChild("HidingController")).new(Camera,Animation,FirstPerson); Hiding:Start()
 require(controllers:WaitForChild("InteractionController")).new(Animation,Camera,Hiding):Start()
