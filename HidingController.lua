@@ -13,10 +13,15 @@ function C._stopTracks(self:any)
 	local exit:AnimationTrack?=self.ExitTrack; if exit then exit:Stop(.12) end
 	self.IdleTrack=nil; self.ExitTrack=nil
 end
-function C._setBodyPoseEnabled(_self:any,enabled:boolean)
+function C._setBodyControlEnabled(self:any,enabled:boolean)
 	local player=Players.LocalPlayer
 	if player then
 		player:SetAttribute("FirstPersonBodyPoseEnabled",enabled)
+		player:SetAttribute("FirstPersonCharacterYawEnabled",enabled)
+	end
+	local firstPerson:any=self.FirstPerson
+	if firstPerson~=nil then
+		firstPerson:SetBodyControlEnabled(enabled)
 	end
 end
 function C.HandleInteract(self:any):boolean
@@ -26,15 +31,17 @@ function C.HandleInteract(self:any):boolean
 	self.Request:FireServer("Exit"); return true
 end
 function C.Start(self:any)
-	local player=Players.LocalPlayer; if player then player.CharacterAdded:Connect(function() self.Hidden=false; self.Exiting=false; self:_stopTracks(); self:_setBodyPoseEnabled(true); self.Camera:Release("Hiding") end) end
+	local player=Players.LocalPlayer; if player then player.CharacterAdded:Connect(function() self.Hidden=false; self.Exiting=false; self:_stopTracks(); self.Animation:StopInteractionAction(.12); self:_setBodyControlEnabled(true); self.Camera:Release("Hiding") end) end
 	self.State.OnClientEvent:Connect(function(message:any)
-		if message.Kind=="Hidden" then
-			self:_stopTracks(); self.Hidden=true; self.Exiting=false; self:_setBodyPoseEnabled(false); self.IdleTrack=self.Animation:PlayAction("LockerIdle")
+		if message.Kind=="Entering" then
+			self.Hidden=false; self.Exiting=false; self:_setBodyControlEnabled(false); self.Animation:PlayInteractionAction("LockerEnter",message.ServerStartTime,message.EnterDuration)
+		elseif message.Kind=="Hidden" then
+			self:_stopTracks(); self.Hidden=true; self.Exiting=false; self:_setBodyControlEnabled(false); self.Animation:StopInteractionAction(.08); self.IdleTrack=self.Animation:PlayAction("LockerIdle")
 			if Config.UseFixedCamera and self.Camera:Acquire("Hiding","Hiding") then self.Camera:SetScriptCFrame("Hiding",message.CameraCFrame); self.Camera:SetFov("Hiding",message.Fov) end
 		elseif message.Kind=="Exiting" then
-			local idle:AnimationTrack?=self.IdleTrack; if idle then idle:Stop(.12) end; self.IdleTrack=nil; self.Exiting=true; self.ExitTrack=self.Animation:PlayAction("LockerExit")
+			local idle:AnimationTrack?=self.IdleTrack; if idle then idle:Stop(.12) end; self.IdleTrack=nil; self.Exiting=true; self:_setBodyControlEnabled(false); self.ExitTrack=self.Animation:PlayInteractionAction("LockerExit",message.ServerStartTime,message.ExitDuration)
 		elseif message.Kind=="Exited" then
-			self.Hidden=false; self.Exiting=false; self:_stopTracks(); self:_setBodyPoseEnabled(true); self.Camera:Release("Hiding")
+			self.Hidden=false; self.Exiting=false; self:_stopTracks(); self.Animation:StopInteractionAction(.12); self:_setBodyControlEnabled(true); self.Camera:Release("Hiding")
 		end
 	end)
 end
