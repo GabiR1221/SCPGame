@@ -11,5 +11,7 @@ local Viewmodel=require(controllers:WaitForChild("ViewmodelController")).new(Cam
 local Tools=require(controllers:WaitForChild("ToolController")).new(Animation,Viewmodel)
 FirstPerson:Start(); Camera:Start(); LookPoseReplication:Start(); Animation:Start(); Footsteps:Start(); CharacterSounds:Start(); Viewmodel:Start(); Tools:Start()
 require(controllers:WaitForChild("InputController")).Start(FirstPerson)
-require(controllers:WaitForChild("InteractionController")).new(Animation,Camera):Start()
+local Hiding=require(controllers:WaitForChild("HidingController")).new(Camera,Animation,FirstPerson); Hiding:Start()
+require(controllers:WaitForChild("InteractionController")).new(Animation,Camera,Hiding):Start()
 require(controllers:WaitForChild("CutsceneController")).new(Camera,Animation):Start()
+require(controllers:WaitForChild("EntityEffectsController")).new(Camera):Start()
