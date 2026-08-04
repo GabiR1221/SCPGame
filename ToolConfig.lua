@@ -9,7 +9,9 @@ return table.freeze({
 			IdleAnimation = "FlashlightIdle", PrimaryAnimation = "FlashlightToggle",
 			EquipFallbackDuration = .35, PrimaryFallbackDuration = .4,
 			PrimaryCooldown = .45, PrimaryCommitTime = .18,
-			TurnOffWhenUnequipped = true, GiveOnSpawnForTesting = true,
+			-- Keep this false when testing drawer pickups, otherwise duplicate
+			-- protection correctly refuses a second Flashlight from loot.
+			TurnOffWhenUnequipped = true, GiveOnSpawnForTesting = false,
 			LightPath = table.freeze({"Handle", "LightAttachment", "SpotLight"}),
 			LightDefaults = table.freeze({Face=Enum.NormalId.Front,Brightness=4,Range=45,Angle=55,Shadows=true,Color=Color3.fromRGB(235,245,255)}),
 			Viewmodel = table.freeze({
