@@ -47,6 +47,9 @@ local crouchRequest=remote("CrouchRequest")
 local lookPoseUpdate=unreliableRemote("LookPoseUpdate")
 local toolActionRequest=remote("ToolActionRequest")
 local toolStateChanged=remote("ToolStateChanged")
+local hidingRequest=remote("HidingRequest")
+local hidingStateChanged=remote("HidingStateChanged")
+local entityEvent=remote("EntityEvent")
 local PlayerStateService: any=require(Services.PlayerStateService).new(characterStateRemote)
 local NoiseService: any=require(Services.NoiseService).new(Tracker)
 local InteractionService: any=require(Services.InteractionService).new(PlayerStateService,NoiseService,interactionStateRemote)
@@ -55,13 +58,15 @@ local CharacterService: any=require(Services.CharacterService).new(PlayerStateSe
 	InteractionService:CancelPlayer(player,reason); CutsceneService:CancelPlayer(player,reason)
 end)
 local CrouchService:any=require(Services.CrouchService).new(PlayerStateService)
-local DrawerService:any=require(Services.DrawerService).new()
 local LookPoseService=require(Services.LookPoseService)
 -- Resolve optional/new services dynamically so Studio's analyzer does not require
 -- a stale, statically inferred child list for the Services Folder.
 local toolServiceModule=Services:WaitForChild("ToolService")
 assert(toolServiceModule:IsA("ModuleScript"),"ServerScriptService.Services.ToolService must be a ModuleScript")
 local ToolService:any=require(toolServiceModule).new(PlayerStateService,toolActionRequest,toolStateChanged)
+local HidingService:any=require(Services:WaitForChild("HidingService")).new(PlayerStateService,Tracker,hidingStateChanged)
+local LootService:any=require(Services:WaitForChild("LootService")).new(ToolService,HidingService)
+local DrawerService:any=require(Services.DrawerService).new(LootService)
 local collisionServiceModule=Services:WaitForChild("CharacterCollisionService")
 assert(collisionServiceModule:IsA("ModuleScript"),"ServerScriptService.Services.CharacterCollisionService must be a ModuleScript")
 local CharacterCollisionService:any=require(collisionServiceModule).new()
@@ -69,18 +74,25 @@ require(Services.PlayerFrameworkRoomBridge).Connect(Lifecycle,InteractionService
 
 -- Safe starter handlers. Replace attribute mutations with calls into your item/door
 -- domain services; the client can never select these callbacks or their rewards.
-InteractionService:RegisterHandler("OpenDrawer",function(player:Player,target:Instance) DrawerService:Open(player,target) end)
+InteractionService:RegisterHandler("OpenDrawer",function(player:Player,target:Instance) DrawerService:Toggle(player,target) end)
+InteractionService:RegisterHandler("CloseDrawer",function(player:Player,target:Instance) DrawerService:Toggle(player,target) end)
+InteractionService:RegisterHandler("Locker",function(player:Player,target:Instance) task.delay(.3,function() HidingService:Enter(player,target) end) end)
+InteractionService:RegisterHandler("PickupTool",function(player:Player,target:Instance) LootService:Collect(player,target) end)
 InteractionService:RegisterHandler("PullLever",function(_player:Player,target:Instance) target:SetAttribute("Pulled",true) end)
 InteractionService:RegisterHandler("PressButton",function(_player:Player,target:Instance) target:SetAttribute("PressedAt",workspace:GetServerTimeNow()) end)
-PlayerStateService:Start(); NoiseService:Start(); InteractionService:Start(interactionRequest); CutsceneService:Start(); CharacterService:Start(); CharacterCollisionService:Start(); CrouchService:Start(crouchRequest); LookPoseService.Start(lookPoseUpdate); ToolService:Start()
+PlayerStateService:Start(); NoiseService:Start(); InteractionService:Start(interactionRequest); CutsceneService:Start(); CharacterService:Start(); CharacterCollisionService:Start(); CrouchService:Start(crouchRequest); LookPoseService.Start(lookPoseUpdate); ToolService:Start(); HidingService:Start(hidingRequest); LootService:Start()
 
 local valid: boolean,errors: {string}=Registry:Scan()
 if not valid then error(`[Main] Room template validation failed with {#errors} error(s); correct every warning above`) end
 local Selector: any=require(Services.RoomSelector).new(Registry,Pacing,Config)
 local Generator: any=require(Services.RoomGenerator).new(Selector,Lifecycle,Pacing,Config,generated)
-local RunManager: any=require(Services.RunManager).new(Config,Registry,Generator,Lifecycle,Cleanup,Tracker,Pacing)
+local Retention:any=require(Services:WaitForChild("RoomRetentionService")).new()
+local RunManager: any=require(Services.RunManager).new(Config,Registry,Generator,Lifecycle,Cleanup,Tracker,Pacing,Retention)
+local EntityDirector:any=require(Services.EntityDirector).new(Lifecycle,RunManager,Tracker,HidingService,Retention,entityEvent)
 local DoorService: any=require(Services.DoorService).new(RunManager,Tracker,doorRemote :: RemoteEvent,generated)
-Tracker:Start(); DoorService:Start()
+Lifecycle:Subscribe("Loaded",function(room) HidingService:RegisterRoom(room); LootService:RegisterRoom(room) end)
+Lifecycle:Subscribe("Unloading",function(room) DrawerService:CleanupRoom(room); LootService:UnregisterRoom(room); HidingService:UnregisterRoom(room) end)
+Tracker:Start(); DoorService:Start(); EntityDirector:Start()
 
 -- Replace nil with a fixed integer during deterministic Studio tests.
 RunManager:StartRun(nil)
