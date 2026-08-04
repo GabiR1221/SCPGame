@@ -27,7 +27,7 @@ function Controller._equipped(self:any,tool:Tool,toolId:string,definition:any)
 	if tool.Parent~=LocalPlayer.Character then return end
 	local previous:Tool?=self.Equipped; if previous and previous~=tool then self.Animation:ClearToolAnimations() end
 	self.Generation+=1; local generation:number=self.Generation; self.Equipped=tool
-	self.Viewmodel:SetEquippedTool(tool,toolId)
+	if definition.Viewmodel and definition.Viewmodel.Enabled then self.Viewmodel:SetEquippedTool(tool,toolId) end
 	self.Animation:ClearToolAnimations(); local track:AnimationTrack?=self.Animation:PlayToolAction(definition.EquipAnimation)
 	local delayTime:number=definition.EquipFallbackDuration
 	if track and track.Length>0 then delayTime=math.min(track.Length,2) end
@@ -35,14 +35,14 @@ function Controller._equipped(self:any,tool:Tool,toolId:string,definition:any)
 		local equipped:Tool?=self.Equipped
 		if self.Generation~=generation or equipped~=tool or tool.Parent~=LocalPlayer.Character then return end
 		self.Animation:SetToolIdle(definition.IdleAnimation)
-		self.Viewmodel:SetIdle(definition.Viewmodel.IdleAnimation)
+		if definition.Viewmodel and definition.Viewmodel.Enabled then self.Viewmodel:SetIdle(definition.Viewmodel.IdleAnimation) end
 	end)
 end
 
 function Controller._unequipped(self:any,tool:Tool,definition:any)
 	if self.Equipped~=tool then return end
 	self.Generation+=1; self.Equipped=nil; self.Animation:ClearToolAnimations()
-	self.Viewmodel:Unequip(tool)
+	if definition.Viewmodel and definition.Viewmodel.Enabled then self.Viewmodel:Unequip(tool) end
 	self.Animation:PlayToolAction(definition.UnequipAnimation)
 end
 
@@ -90,7 +90,7 @@ function Controller.Start(self:any)
 		local toolIdValue=toolValue:GetAttribute("ToolId"); if typeof(toolIdValue)~="string" or message.ToolId~=toolIdValue then return end
 		local definition:any=Config.Tools[toolIdValue]; if definition==nil or message.AnimationKey~=definition.PrimaryAnimation then return end
 		self.Animation:PlayToolAction(definition.PrimaryAnimation)
-		self.Viewmodel:PlayAction(definition.Viewmodel.PrimaryAnimation)
+		if definition.Viewmodel and definition.Viewmodel.Enabled then self.Viewmodel:PlayAction(definition.Viewmodel.PrimaryAnimation) end
 	end)
 	self:_rebind()
 end
