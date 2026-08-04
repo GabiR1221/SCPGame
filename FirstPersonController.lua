@@ -18,6 +18,7 @@ local Controller = {}
 Controller.__index = Controller
 Controller.Enabled = true
 Controller.BodyPoseEnabled = true
+Controller.CharacterYawEnabled = true
 
 local visibleParts: {[BasePart]: boolean} = {}
 
@@ -50,6 +51,13 @@ local rawCameraPitch = 0
 local waistLayer = CFrame.identity
 local neckLayer = CFrame.identity
 local rootLayer = CFrame.identity
+
+local function isCharacterYawEnabled(self: any): boolean
+	if self.CharacterYawEnabled == false then
+		return false
+	end
+	return LocalPlayer:GetAttribute("FirstPersonCharacterYawEnabled") ~= false
+end
 
 local function isBodyPoseEnabled(self: any): boolean
 	if self.BodyPoseEnabled == false then
@@ -140,7 +148,7 @@ function Controller._claimAutoRotate(self: any)
 	if not self.Enabled then
 		return
 	end
-	if not isBodyPoseEnabled(self) then
+	if not isCharacterYawEnabled(self) then
 		return
 	end
 
@@ -164,6 +172,21 @@ function Controller._claimAutoRotate(self: any)
 
 	-- This controller is the sole character-yaw owner during first person.
 	activeHumanoid.AutoRotate = false
+end
+
+function Controller.SetBodyControlEnabled(self: any, enabled: boolean)
+	self.CharacterYawEnabled = enabled
+	self.BodyPoseEnabled = enabled
+	LocalPlayer:SetAttribute("FirstPersonCharacterYawEnabled", enabled)
+	LocalPlayer:SetAttribute("FirstPersonBodyPoseEnabled", enabled)
+	if enabled then
+		self:_claimAutoRotate()
+	else
+		self:_restoreAutoRotate()
+		smoothedPitch = 0
+		desiredBodyOffset = 0
+		self:_resetPose()
+	end
 end
 
 function Controller.SetEnabled(self: any, enabled: boolean)
@@ -279,6 +302,10 @@ function Controller._updateBody(self: any, dt: number)
 			* downward
 		)
 		* Config.FirstPersonBody.ForwardSign
+
+	if not isCharacterYawEnabled(self) then
+		return
+	end
 
 	if not Config.FirstPersonBody.AlignCharacterYaw then
 		return
@@ -608,6 +635,7 @@ end
 
 function Controller.Start(self: any)
 	self:SetEnabled(true)
+	self:SetBodyControlEnabled(true)
 
 	RunService:BindToRenderStep(
 		"FirstPersonVisibleBody",
