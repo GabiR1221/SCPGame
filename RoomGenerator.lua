@@ -36,7 +36,11 @@ end
 function Generator.GenerateOne(self:any,run:any,index:number,previous:any?):any
 	local excluded: {[string]: boolean}={}; local required: string?=if previous then previous.Model:GetAttribute("ExitType") :: string? else nil; local diagnostics: {any}={}
 	for attempt=1,self.Config.Generation.MaximumGenerationRetries do
-		local template: any?,debugInfo: any=self.Selector:Select(run,index,required,excluded); table.insert(diagnostics,debugInfo)
+		-- Once a spatial candidate has failed, allow the selector to relax only
+		-- repetition/cooldown rules. Without this, a valid alternate room can be
+		-- rejected solely because it appeared recently, leaving no candidate.
+		local placementRecovery=next(excluded)~=nil
+		local template: any?,debugInfo: any=self.Selector:Select(run,index,required,excluded,placementRecovery); table.insert(diagnostics,debugInfo)
 		if not template then
 			local failures: {string}={}; for _,info: any in diagnostics do if info.PlacementFailure then table.insert(failures,info.PlacementFailure) end end
 			local suffix=if #failures>0 then `; placement failures: {table.concat(failures," | ")}` else ""
