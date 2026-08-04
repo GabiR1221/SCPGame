@@ -16,6 +16,41 @@ function Registry.new(config: any): any
 	return setmetatable({ Config = config, Templates = {} :: {[string]: any}, Errors = {} :: {string} }, Registry)
 end
 
+
+local function namedBasePart(root: Instance, name: string): BasePart?
+	local value = root:FindFirstChild(name, true)
+	if value and value:IsA("BasePart") then return value end
+	return nil
+end
+
+local function objectAnimationRoot(root: Instance): BasePart?
+	local rootName = root:GetAttribute("ObjectAnimationRootName")
+	if typeof(rootName) == "string" then
+		local configured = namedBasePart(root, rootName)
+		if configured then return configured end
+	end
+	if root:IsA("Model") then
+		local primary = root.PrimaryPart
+		if primary then return primary end
+	end
+	return namedBasePart(root, "Root") or namedBasePart(root, "AnimationRoot") or namedBasePart(root, "Collision") or namedBasePart(root, "CollisionPart")
+end
+
+local function anchoredObjectAnimationRootFor(part: BasePart, roomModel: Model): BasePart?
+	local cursor: Instance? = part.Parent
+	while cursor and cursor ~= roomModel.Parent do
+		if cursor:IsA("Model") or cursor:IsA("Folder") then
+			if cursor:FindFirstChildWhichIsA("AnimationController", true) then
+				local root = objectAnimationRoot(cursor)
+				if root and root.Anchored then return root end
+			end
+		end
+		if cursor == roomModel then break end
+		cursor = cursor.Parent
+	end
+	return nil
+end
+
 local function childPart(model: Model, name: string, errors: {string}): BasePart?
 	local object = model:FindFirstChild(name)
 	if not object or not object:IsA("BasePart") then table.insert(errors, `missing {name} BasePart`); return nil end
@@ -58,7 +93,7 @@ function Registry._validate(self: any, model: Model): ({string}, any)
 		end
 	end
 	for _, descendant in model:GetDescendants() do
-		if descendant:IsA("BasePart") and not descendant.Anchored then table.insert(errors, `{descendant:GetFullName()} is unanchored`) end
+		if descendant:IsA("BasePart") and not descendant.Anchored and anchoredObjectAnimationRootFor(descendant, model)==nil then table.insert(errors, `{descendant:GetFullName()} is unanchored`) end
 	end
 	local entranceType, exitType = attributes.EntranceType, attributes.ExitType
 	local compatibility = self.Config.ConnectorCompatibility
