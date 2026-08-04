@@ -78,18 +78,27 @@ function Service._registerClone(self:any,tool:Tool,toolId:string,owner:Player)
 	tool.Destroying:Connect(function() self.Generations[tool]=(self.Generations[tool] or 0)+1; self.Approved[tool]=nil end)
 end
 
-function Service._give(self:any,player:Player,toolId:string)
-	local definition:any=Config.Tools[toolId]; if definition==nil then return end
+function Service.HasTool(self:any,player:Player,toolId:string):boolean
+	for _,container in {player:FindFirstChildOfClass("Backpack"),player.Character} do if container then for _,child in container:GetChildren() do if child:IsA("Tool") and child:GetAttribute("ToolId")==toolId then return true end end end end
+	return false
+end
+function Service.GetToolCount(self:any,player:Player):number
+	local count=0; for _,container in {player:FindFirstChildOfClass("Backpack"),player.Character} do if container then for _,child in container:GetChildren() do if child:IsA("Tool") then count+=1 end end end end; return count
+end
+function Service.GiveTool(self:any,player:Player,toolId:string,options:any?):(boolean,string?)
+	local definition:any=Config.Tools[toolId]; if definition==nil then return false,"UnknownTool" end
 	local character=player.Character; local backpack=player:FindFirstChildOfClass("Backpack")
-	if backpack==nil then return end
-	for _,container in {backpack,character} do if container then for _,child in container:GetChildren() do if child:IsA("Tool") and child:GetAttribute("ToolId")==toolId then return end end end end
-	local templates:Folder?=self.Templates; if templates==nil then return end
+	if backpack==nil then return false,"NoBackpack" end
+	if not (options and options.AllowDuplicate==true) and self:HasTool(player,toolId) then return false,"Duplicate" end
+	local templates:Folder?=self.Templates; if templates==nil then return false,"NotStarted" end
 	local template=templates:FindFirstChild(definition.TemplateName)
-	if not template or not template:IsA("Tool") then warn(`[ToolService] Missing Tool template ServerStorage.ToolTemplates.{definition.TemplateName}`); return end
-	if not self:_validateStructure(template,toolId,true) then return end
+	if not template or not template:IsA("Tool") then warn(`[ToolService] Missing Tool template ServerStorage.ToolTemplates.{definition.TemplateName}`); return false,"MissingTemplate" end
+	if not self:_validateStructure(template,toolId,true) then return false,"InvalidTemplate" end
 	local clone=template:Clone(); clone:SetAttribute("Active",false)
 	local light=resolvePath(clone,definition.LightPath); if light and light:IsA("SpotLight") then self:_applyLightDefaults(light,definition) end
 	self:_registerClone(clone,toolId,player); clone.Parent=backpack
+	if options and options.AutoEquip==true and character then local humanoid=character:FindFirstChildOfClass("Humanoid"); if humanoid then humanoid:EquipTool(clone) end end
+	return true,nil
 end
 
 function Service._rateAllowed(self:any,player:Player):boolean
@@ -136,9 +145,9 @@ function Service._player(self:any,player:Player)
 		if humanoid and humanoid:IsA("Humanoid") then table.insert(self.Connections[player],humanoid.Died:Connect(function()
 				for tool,approval in self.Approved do if tool:IsDescendantOf(character) then self:_disable(tool,approval.ToolId) end end
 			end)) end
-		task.defer(function() for toolId,definition:any in Config.Tools do if definition.GiveOnSpawnForTesting then self:_give(player,toolId) end end end)
+		task.defer(function() for toolId,definition:any in Config.Tools do if definition.GiveOnSpawnForTesting then self:GiveTool(player,toolId,nil) end end end)
 	end))
-	if player.Character then task.defer(function() for toolId,definition:any in Config.Tools do if definition.GiveOnSpawnForTesting then self:_give(player,toolId) end end end) end
+	if player.Character then task.defer(function() for toolId,definition:any in Config.Tools do if definition.GiveOnSpawnForTesting then self:GiveTool(player,toolId,nil) end end end) end
 end
 
 function Service.Start(self:any)
