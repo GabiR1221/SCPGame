@@ -6,7 +6,7 @@ local Config:any=require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("
 local C={}; C.__index=C
 function C.new(camera:any,animation:any,firstPerson:any):any
 	local remotes=ReplicatedStorage:WaitForChild("Remotes")
-	return setmetatable({Camera=camera,Animation=animation,FirstPerson=firstPerson,Hidden=false,Exiting=false,IdleTrack=nil :: AnimationTrack?,ExitTrack=nil :: AnimationTrack?,Request=remotes:WaitForChild("HidingRequest") :: RemoteEvent,State=remotes:WaitForChild("HidingStateChanged") :: RemoteEvent},C)
+	return setmetatable({Camera=camera,Animation=animation,FirstPerson=firstPerson,Hidden=false,Entering=false,Exiting=false,EnterGeneration=0,IdleTrack=nil :: AnimationTrack?,ExitTrack=nil :: AnimationTrack?,Request=remotes:WaitForChild("HidingRequest") :: RemoteEvent,State=remotes:WaitForChild("HidingStateChanged") :: RemoteEvent},C)
 end
 function C._stopTracks(self:any)
 	local idle:AnimationTrack?=self.IdleTrack; if idle then idle:Stop(.12) end
@@ -24,6 +24,17 @@ function C._setBodyControlEnabled(self:any,enabled:boolean)
 		firstPerson:SetBodyControlEnabled(enabled)
 	end
 end
+function C.RequestEnter(self:any,locker:Instance):boolean
+	if self.Hidden or self.Entering or self.Exiting then return false end
+	self.Entering=true; self.EnterGeneration+=1; local generation:number=self.EnterGeneration
+	self:_setBodyControlEnabled(false)
+	self.Request:FireServer("Enter",locker)
+	task.delay(Config.EnterRequestFallbackDuration,function()
+		if self.EnterGeneration~=generation or not self.Entering or self.Hidden then return end
+		self.Entering=false; self:_setBodyControlEnabled(true)
+	end)
+	return true
+end
 function C.HandleInteract(self:any):boolean
 	if not self.Hidden or self.Exiting then return false end
 	-- The server owns the phase change. Do not optimistically mark Exiting here:
@@ -31,17 +42,17 @@ function C.HandleInteract(self:any):boolean
 	self.Request:FireServer("Exit"); return true
 end
 function C.Start(self:any)
-	local player=Players.LocalPlayer; if player then player.CharacterAdded:Connect(function() self.Hidden=false; self.Exiting=false; self:_stopTracks(); self.Animation:StopInteractionAction(.12); self:_setBodyControlEnabled(true); self.Camera:Release("Hiding") end) end
+	local player=Players.LocalPlayer; if player then player.CharacterAdded:Connect(function() self.Hidden=false; self.Entering=false; self.Exiting=false; self:_stopTracks(); self.Animation:StopInteractionAction(.12); self:_setBodyControlEnabled(true); self.Camera:Release("Hiding") end) end
 	self.State.OnClientEvent:Connect(function(message:any)
 		if message.Kind=="Entering" then
-			self.Hidden=false; self.Exiting=false; self:_setBodyControlEnabled(false); self.Animation:PlayInteractionAction("LockerEnter",message.ServerStartTime,message.EnterDuration)
+			self.Hidden=false; self.Entering=true; self.Exiting=false; self:_setBodyControlEnabled(false); self.Animation:PlayInteractionAction("LockerEnter",message.ServerStartTime,message.EnterDuration)
 		elseif message.Kind=="Hidden" then
-			self:_stopTracks(); self.Hidden=true; self.Exiting=false; self:_setBodyControlEnabled(false); self.Animation:StopInteractionAction(.08); self.IdleTrack=self.Animation:PlayAction("LockerIdle")
+			self:_stopTracks(); self.Hidden=true; self.Entering=false; self.Exiting=false; self:_setBodyControlEnabled(false); self.Animation:StopInteractionAction(.08); self.IdleTrack=self.Animation:PlayAction("LockerIdle")
 			if Config.UseFixedCamera and self.Camera:Acquire("Hiding","Hiding") then self.Camera:SetScriptCFrame("Hiding",message.CameraCFrame); self.Camera:SetFov("Hiding",message.Fov) end
 		elseif message.Kind=="Exiting" then
 			local idle:AnimationTrack?=self.IdleTrack; if idle then idle:Stop(.12) end; self.IdleTrack=nil; self.Exiting=true; self:_setBodyControlEnabled(false); self.ExitTrack=self.Animation:PlayInteractionAction("LockerExit",message.ServerStartTime,message.ExitDuration)
 		elseif message.Kind=="Exited" then
-			self.Hidden=false; self.Exiting=false; self:_stopTracks(); self.Animation:StopInteractionAction(.12); self:_setBodyControlEnabled(true); self.Camera:Release("Hiding")
+			self.Hidden=false; self.Entering=false; self.Exiting=false; self:_stopTracks(); self.Animation:StopInteractionAction(.12); self:_setBodyControlEnabled(true); self.Camera:Release("Hiding")
 		end
 	end)
 end
