@@ -38,11 +38,11 @@ return table.freeze({
 		FlashlightViewmodelUnequip={Id="rbxassetid://118308237201245",Priority=Enum.AnimationPriority.Action,Looped=false,AuthoredSpeed=1},
 
 	}),
+	ObjectAnimationDebug=false,
 	ObjectAnimations=table.freeze({
-		DrawerOpen={Id="rbxassetid://88542616058118",Priority=Enum.AnimationPriority.Action,Looped=false},
-		DrawerClose={Id="rbxassetid://115769042595557",Priority=Enum.AnimationPriority.Action,Looped=false},
-		LockerEnterObject={Id="rbxassetid://99308891064081",Priority=Enum.AnimationPriority.Action,Looped=false},
-		LockerExitObject={Id="rbxassetid://85426657586918",Priority=Enum.AnimationPriority.Action,Looped=false},
+		DrawerOpen={Id="rbxassetid://88542616058118",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.55,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
+		DrawerClose={Id="rbxassetid://115769042595557",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.55,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
+		LockerEnterObject={Id="rbxassetid://99308891064081",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.7,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
+		LockerExitObject={Id="rbxassetid://85426657586918",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.65,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
 	})
-	
 })
