@@ -243,7 +243,29 @@ function Controller.ToggleForTesting(self: any)
 	self:SetEnabled(not self.Enabled)
 end
 
+function Controller._updateVisibility(self: any)
+	for part: BasePart in visibleParts do
+		if part.Parent == nil then
+			visibleParts[part] = nil
+			continue
+		end
+
+		local isAccessoryPart =
+			part:FindFirstAncestorOfClass("Accessory") ~= nil
+
+		local hideInFirstPerson =
+			part.Name == "Head"
+			or isAccessoryPart
+
+		part.LocalTransparencyModifier =
+			if self.Enabled and hideInFirstPerson
+			then 1
+			else 0
+	end
+end
+
 function Controller._updateBody(self: any, dt: number)
+	self:_updateVisibility()
 	for part: BasePart in visibleParts do
 		if part.Parent == nil then
 			visibleParts[part] = nil
@@ -650,6 +672,13 @@ function Controller.Start(self: any)
 		function(dt: number)
 			self:_updateBody(dt)
 		end
+	)
+
+	table.insert(
+		lifecycleConnections,
+		RunService.RenderStepped:Connect(function()
+			self:_updateVisibility()
+		end)
 	)
 
 	table.insert(
