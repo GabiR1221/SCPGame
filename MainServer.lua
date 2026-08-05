@@ -79,7 +79,7 @@ require(Services.PlayerFrameworkRoomBridge).Connect(Lifecycle,InteractionService
 -- domain services; the client can never select these callbacks or their rewards.
 InteractionService:RegisterHandler("OpenDrawer",function(player:Player,target:Instance) DrawerService:Toggle(player,target) end)
 InteractionService:RegisterHandler("CloseDrawer",function(player:Player,target:Instance) DrawerService:Toggle(player,target) end)
-InteractionService:RegisterHandler("Locker",function(player:Player,target:Instance) HidingService:Enter(player,target) end)
+InteractionService:RegisterSpecialHandler("Locker",function(player:Player,target:Instance) HidingService:Enter(player,target) end)
 InteractionService:RegisterHandler("PickupTool",function(player:Player,target:Instance) LootService:Collect(player,target) end)
 InteractionService:RegisterHandler("PullLever",function(_player:Player,target:Instance) target:SetAttribute("Pulled",true) end)
 InteractionService:RegisterHandler("PressButton",function(_player:Player,target:Instance) target:SetAttribute("PressedAt",workspace:GetServerTimeNow()) end)
