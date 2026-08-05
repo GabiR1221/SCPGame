@@ -6,6 +6,7 @@ local Config:any=require(ReplicatedStorage.Shared.HidingConfig)
 local S={}; S.__index=S
 type Record={Locker:Instance,RoomIndex:number,Root:BasePart,WasAnchored:boolean,Token:string,Generation:number,Phase:string}
 local function attachment(target:Instance,name:string):Attachment? local value=target:FindFirstChild(name,true); if value and value:IsA("Attachment") then return value end; return nil end
+local function pointCFrame(target:Instance,name:string):CFrame? local value=target:FindFirstChild(name,true); if value and value:IsA("Attachment") then return value.WorldCFrame elseif value and value:IsA("BasePart") then return value.CFrame end; return nil end
 function S.new(states:any,tracker:any,remote:RemoteEvent,objectAnimation:any?):any return setmetatable({States=states,Tracker=tracker,Remote=remote,ObjectAnimation=objectAnimation,Lockers={} :: {[Instance]:number},Occupants={} :: {[Instance]:Player},Records={} :: {[Player]:Record},Rates={} :: {[Player]:number},Generation={} :: {[Player]:number}},S) end
 function S.IsHidden(self:any,player:Player):boolean local record:Record?=self.Records[player]; return record~=nil and record.Phase=="Hidden" end
 function S.GetLocker(self:any,player:Player):Instance? local record:Record?=self.Records[player]; return if record then record.Locker else nil end
@@ -30,6 +31,8 @@ function S.Enter(self:any,player:Player,locker:Instance)
 	local generation=(self.Generation[player] or 0)+1; self.Generation[player]=generation; self.Occupants[locker]=player; locker:SetAttribute("Occupied",true); locker:SetAttribute("InteractionText","Occupied")
 	if Config.UnequipToolsOnEnter then humanoid:UnequipTools() end
 	local wasAnchored=rootValue.Anchored; self.Records[player]={Locker=locker,RoomIndex=roomIndex,Root=rootValue,WasAnchored=wasAnchored,Token=token,Generation=generation,Phase="Entering"}
+	local startCFrame=pointCFrame(locker,"Start")
+	if startCFrame then rootValue.AssemblyLinearVelocity=Vector3.zero; rootValue.AssemblyAngularVelocity=Vector3.zero; rootValue.CFrame=startCFrame; rootValue.Anchored=true end
 	if self.ObjectAnimation then self.ObjectAnimation.Play(locker,"LockerEnterObject",0) end
 	local camera=attachment(locker,"CameraPoint"); local startTime=workspace:GetServerTimeNow(); self.Remote:FireClient(player,{Kind="Entering",Locker=locker,ServerStartTime=startTime,EnterDuration=Config.EnterDuration,EnterCommitTime=Config.EnterCommitTime,CameraCFrame=if camera then camera.WorldCFrame else hidden.WorldCFrame,Fov=Config.CameraFov})
 	task.delay(Config.EnterCommitTime,function()
@@ -46,7 +49,7 @@ function S.Exit(self:any,player:Player)
 	self.Remote:FireClient(player,{Kind="Exiting",ServerStartTime=startTime,ExitDuration=Config.ExitDuration,ExitCommitTime=Config.ExitCommitTime}); task.delay(Config.ExitCommitTime,function() local current:Record?=self.Records[player]; if not current or current.Generation~=generation or current.Phase~="Exiting" then return end; local exitPoint=attachment(current.Locker,"ExitPoint"); if exitPoint and current.Root.Parent then current.Root.CFrame=exitPoint.WorldCFrame; current.Root.AssemblyLinearVelocity=Vector3.zero; current.Root.AssemblyAngularVelocity=Vector3.zero; current.Root.Anchored=current.WasAnchored; if not current.Root.Anchored then current.Root:SetNetworkOwnershipAuto() end end; self:_cleanup(player,"Exited") end)
 end
 function S.Start(self:any,request:RemoteEvent)
-	request.OnServerEvent:Connect(function(player:Player,action:unknown) if action=="Exit" then self:Exit(player) end end)
+	request.OnServerEvent:Connect(function(player:Player,action:unknown,target:unknown) if action=="Exit" then self:Exit(player) elseif action=="Enter" and typeof(target)=="Instance" then self:Enter(player,target :: Instance) end end)
 	Players.PlayerRemoving:Connect(function(player) self:_cleanup(player,"Leaving"); self.Rates[player]=nil end)
 	local function bind(player:Player) local function characterAdded(character:Model) local humanoid=character:WaitForChild("Humanoid",10); if humanoid and humanoid:IsA("Humanoid") then humanoid.Died:Connect(function() self:_cleanup(player,"Died") end) end end; player.CharacterRemoving:Connect(function() self:_cleanup(player,"CharacterRemoved") end); player.CharacterAdded:Connect(characterAdded); if player.Character then task.spawn(characterAdded,player.Character) end end
 	Players.PlayerAdded:Connect(bind); for _,player in Players:GetPlayers() do bind(player) end
