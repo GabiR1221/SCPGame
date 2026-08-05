@@ -17,6 +17,7 @@ function C._input(self:any,actionName:string,state:Enum.UserInputState):Enum.Con
 	if actionName=="HorrorInteract" and id=="PickupTool" then return Enum.ContextActionResult.Pass end
 	local rawDuration=target:GetAttribute("HoldDuration"); local duration=if typeof(rawDuration)=="number" then math.max(0,rawDuration) else 0
 	self.HoldSerial=(self.HoldSerial :: number)+1; local serial:number=self.HoldSerial
+	if id=="Locker" then local hiding:any=self.Hiding; if hiding~=nil and hiding:RequestEnter(target) then return Enum.ContextActionResult.Sink end end
 	if duration<=0 then self.Request:FireServer(target,id) else task.delay(duration,function() if self.HoldSerial==serial and self.Target==target and not self.Busy then self.Request:FireServer(target,id) end end) end
 	return Enum.ContextActionResult.Sink
 end
