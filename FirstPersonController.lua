@@ -180,9 +180,16 @@ function Controller.SetBodyControlEnabled(self: any, enabled: boolean)
 	LocalPlayer:SetAttribute("FirstPersonCharacterYawEnabled", enabled)
 	LocalPlayer:SetAttribute("FirstPersonBodyPoseEnabled", enabled)
 	if enabled then
+		self:_restoreAutoRotate()
 		self:_claimAutoRotate()
 	else
-		self:_restoreAutoRotate()
+		local activeHumanoid = humanoid
+		if activeHumanoid ~= nil and activeHumanoid.Parent ~= nil then
+			if originalAutoRotate == nil then
+				originalAutoRotate = activeHumanoid.AutoRotate
+			end
+			activeHumanoid.AutoRotate = false
+		end
 		smoothedPitch = 0
 		desiredBodyOffset = 0
 		self:_resetPose()
@@ -639,7 +646,7 @@ function Controller.Start(self: any)
 
 	RunService:BindToRenderStep(
 		"FirstPersonVisibleBody",
-		Enum.RenderPriority.Camera.Value + 1,
+		Enum.RenderPriority.Last.Value,
 		function(dt: number)
 			self:_updateBody(dt)
 		end
