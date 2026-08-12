@@ -12,7 +12,7 @@ function S.IsHidden(self:any,player:Player):boolean local record:Record?=self.Re
 function S.GetLocker(self:any,player:Player):Instance? local record:Record?=self.Records[player]; return if record then record.Locker else nil end
 function S.IsLockerOccupied(self:any,locker:Instance):boolean return self.Occupants[locker]~=nil end
 function S.AvailableInRooms(self:any,first:number,last:number):number local count=0; for locker,index in self.Lockers do if index>=first and index<=last and locker.Parent and locker:GetAttribute("Enabled")~=false and not self.Occupants[locker] then count+=1 end end; return count end
-function S.RegisterRoom(self:any,room:any) for _,value in room.Model:GetDescendants() do if value:GetAttribute("InteractionId")=="Locker" then self.Lockers[value]=room.Index; value:SetAttribute("Occupied",false) end end end
+function S.RegisterRoom(self:any,room:any) for _,value in room.Model:GetDescendants() do if value:GetAttribute("InteractionId")=="Locker" then self.Lockers[value]=room.Index; value:SetAttribute("Occupied",false); if self.ObjectAnimation then self.ObjectAnimation.PreloadTarget(value,{"LockerEnterObject","LockerExitObject"}) end end end end
 function S._cleanup(self:any,player:Player,reason:string)
 	self.Generation[player]=(self.Generation[player] or 0)+1; local record:Record?=self.Records[player]; if not record then return end
 	self.Records[player]=nil; if self.Occupants[record.Locker]==player then self.Occupants[record.Locker]=nil; if record.Locker.Parent then record.Locker:SetAttribute("Occupied",false); record.Locker:SetAttribute("InteractionText","Hide") end end
@@ -39,6 +39,7 @@ function S.Enter(self:any,player:Player,locker:Instance)
 		local record:Record?=self.Records[player]; if not record or record.Generation~=generation or record.Phase~="Entering" or not locker.Parent or humanoid.Health<=0 then self:_cleanup(player,"EnterCancelled"); return end
 		local currentHidden=attachment(locker,"HiddenPoint"); if not currentHidden or not rootValue.Parent then self:_cleanup(player,"EnterCancelled"); return end
 		rootValue.AssemblyLinearVelocity=Vector3.zero; rootValue.AssemblyAngularVelocity=Vector3.zero; rootValue.CFrame=currentHidden.WorldCFrame; rootValue.Anchored=Config.AnchorRootWhileHidden==true; record.Phase="Hidden"
+		if Config.Debug then local distance=(rootValue.Position-currentHidden.WorldPosition).Magnitude; local lower=character:FindFirstChild("LowerTorso"); local upper=character:FindFirstChild("UpperTorso"); warn(`[HidingDebug] rootToHiddenDistance={distance} lowerTorsoOffset={if lower and lower:IsA("BasePart") then (lower.Position-rootValue.Position).Magnitude else -1} upperTorsoOffset={if upper and upper:IsA("BasePart") then (upper.Position-rootValue.Position).Magnitude else -1}`) end
 		local currentCamera=attachment(locker,"CameraPoint"); self.Remote:FireClient(player,{Kind="Hidden",ServerStartTime=workspace:GetServerTimeNow(),CameraCFrame=if currentCamera then currentCamera.WorldCFrame else currentHidden.WorldCFrame,Fov=Config.CameraFov})
 	end)
 	task.delay(Config.EnterDuration,function() local record:Record?=self.Records[player]; if record and record.Generation==generation and record.Phase=="Entering" then self:_cleanup(player,"EnterCancelled") end end)
