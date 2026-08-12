@@ -1,6 +1,7 @@
 --!strict
 -- ModuleScript: ReplicatedStorage/Shared/ObjectAnimationUtil
 local ContentProvider=game:GetService("ContentProvider")
+local RunService=game:GetService("RunService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local AnimationConfig:any=require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("AnimationConfig"))
 local Util={}
@@ -45,6 +46,12 @@ function Util.Play(target:Instance,key:string,fadeTime:number?):Result?
 	local definition=definitionFor(key); if not validId(definition) then return nil end
 	local animator=animatorFor(target); if animator==nil then return nil end
 	local activeTrack=cachedTrack(target,key); if activeTrack==nil then return nil end
+	-- LoadAnimation may return before Roblox has resolved the clip. Playing that
+	-- zero-length track is the reason a newly joined server can swallow the first
+	-- drawer interaction. Give it the configured, bounded warm-up window.
+	local lengthTimeout=if typeof(definition.LengthTimeout)=="number" then math.clamp(definition.LengthTimeout,0,.5) else .25
+	local deadline=os.clock()+lengthTimeout
+	while activeTrack.Length<=0 and os.clock()<deadline do RunService.Heartbeat:Wait() end
 	Util.Prepare(target)
 	generations[animator]=(generations[animator] or 0)+1; local generation=generations[animator]
 	local previous=activeByAnimator[animator]; if previous and previous.Track~=activeTrack then previous.Track:Stop(0) end
