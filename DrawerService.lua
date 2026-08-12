@@ -101,21 +101,21 @@ function DrawerService.Toggle(self: any, _player: Player, target: Instance)
 	end
 
 	local drawerValue = target:FindFirstChild("Drawer", true)
-	local openValue = target:FindFirstChild("OpenPoint", true)
-	if drawerValue == nil or not drawerValue:IsA("BasePart") or openValue == nil or not openValue:IsA("Attachment") then
-		warn(`[DrawerService] {target:GetFullName()} requires a Drawer BasePart and OpenPoint Attachment`)
-		return
-	end
-
-	local drawer: BasePart = drawerValue
-	local openPoint: Attachment = openValue
-	if self.Closed[target] == nil then
-		self.Closed[target] = drawer.CFrame
-	end
-
 	local opening = target:GetAttribute("Opened") ~= true
 	local animationKey = if opening then "DrawerOpen" else "DrawerClose"
 	local mode = self:_mode(target, animationKey)
+	-- Animated drawers are positioned by their rig/keyframes and do not need
+	-- legacy placement attachments. Only validate those for the tween fallback.
+	local drawer: BasePart? = if drawerValue ~= nil and drawerValue:IsA("BasePart") then drawerValue else nil
+	local openValue = target:FindFirstChild("OpenPoint", true)
+	local openPoint: Attachment? = if openValue ~= nil and openValue:IsA("Attachment") then openValue else nil
+	if mode == "AttachmentTween" and (drawer == nil or openPoint == nil) then
+		warn(`[DrawerService] {target:GetFullName()} uses AttachmentTween and requires a Drawer BasePart and OpenPoint Attachment`)
+		return
+	end
+	if drawer ~= nil and self.Closed[target] == nil then
+		self.Closed[target] = drawer.CFrame
+	end
 	self.Generations[target] = (self.Generations[target] or 0) + 1
 	local generation: number = self.Generations[target]
 
@@ -139,19 +139,22 @@ function DrawerService.Toggle(self: any, _player: Player, target: Instance)
 	end
 
 	local closedPoint = target:FindFirstChild("ClosedPoint", true)
+	-- Narrowed above for AttachmentTween mode.
+	local tweenDrawer = drawer :: BasePart
+	local tweenOpenPoint = openPoint :: Attachment
 	local destination: CFrame
 	if opening then
-		destination = openPoint.WorldCFrame
+		destination = tweenOpenPoint.WorldCFrame
 	elseif closedPoint ~= nil and closedPoint:IsA("Attachment") then
 		destination = closedPoint.WorldCFrame
 	else
-		destination = self.Closed[target]
+		destination = self.Closed[target] :: CFrame
 	end
 
 	local durationValue = target:GetAttribute("DrawerTweenTime")
 	local duration = if typeof(durationValue) == "number" then math.clamp(durationValue, 0.05, 3) else 0.55
-	drawer.Anchored = true
-	local tween = TweenService:Create(drawer, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = destination })
+	tweenDrawer.Anchored = true
+	local tween = TweenService:Create(tweenDrawer, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = destination })
 	self.Active[target] = { Kind = "AttachmentTween", Generation = generation, Tween = tween }
 	if AnimationConfig.ObjectAnimationDebug then
 		print(`[DrawerService] target={target:GetFullName()} direction={if opening then "Open" else "Close"} mode=AttachmentTween key=none initialLength=0 duration={duration} generation={generation}`)
