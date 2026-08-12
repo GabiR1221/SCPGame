@@ -11,7 +11,7 @@ return table.freeze({
 			PrimaryCooldown = .45, PrimaryCommitTime = .18,
 			-- Keep this false when testing drawer pickups, otherwise duplicate
 			-- protection correctly refuses a second Flashlight from loot.
-			TurnOffWhenUnequipped = true, GiveOnSpawnForTesting = false,
+			TurnOffWhenUnequipped = true, GiveOnSpawnForTesting = true,
 			LightPath = table.freeze({"Handle", "LightAttachment", "SpotLight"}),
 			LightDefaults = table.freeze({Face=Enum.NormalId.Front,Brightness=4,Range=45,Angle=55,Shadows=true,Color=Color3.fromRGB(235,245,255)}),
 			Viewmodel = table.freeze({
