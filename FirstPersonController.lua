@@ -558,11 +558,18 @@ function Controller._bindCharacter(
 )
 	self:_releaseCharacter()
 
-	for _, descendant in character:GetDescendants() do
-		if descendant:IsA("BasePart") then
-			visibleParts[descendant] = true
-		end
-	end
+	-- Subscribe before yielding for rig parts so replication cannot create a gap
+	-- between the snapshot and the live descendant listener.
+	table.insert(
+		characterConnections,
+		character.DescendantAdded:Connect(
+			function(descendant: Instance)
+				if descendant:IsA("BasePart") then
+					visibleParts[descendant] = true
+				end
+			end
+		)
+	)
 
 	-- CharacterAdded can fire before the complete rig replicates. Waiting for the
 	-- semantic body parts once lets us resolve a stable cache without per-frame scans.
@@ -570,6 +577,15 @@ function Controller._bindCharacter(
 	character:WaitForChild("UpperTorso", 10)
 	character:WaitForChild("Head", 10)
 	character:WaitForChild("HumanoidRootPart", 10)
+
+	-- Re-scan after the waits. On the first spawn, body parts can replicate while
+	-- this function is yielding; the old pre-wait scan permanently missed them.
+	for _, descendant in character:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			visibleParts[descendant] = true
+		end
+	end
+	self:_updateVisibility()
 
 	local joints = PoseJointUtil.Resolve(character, true)
 	waist = joints.Waist
@@ -638,16 +654,6 @@ function Controller._bindCharacter(
 			end)
 	)
 
-	table.insert(
-		characterConnections,
-		character.DescendantAdded:Connect(
-			function(descendant: Instance)
-				if descendant:IsA("BasePart") then
-					visibleParts[descendant] = true
-				end
-			end
-		)
-	)
 
 	table.insert(
 		characterConnections,
