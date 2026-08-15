@@ -17,6 +17,7 @@ local function folder(parent:Instance,name:string):Folder
 	local value=Instance.new("Folder"); value.Name=name; value.Parent=parent; return value
 end
 folder(ServerStorage,"RoomTemplates")
+folder(ServerStorage,"PropTemplates")
 local generated=folder(Workspace,"GeneratedRooms"); folder(Workspace,"RuntimeEntities")
 local remotes=folder(ReplicatedStorage,"Remotes")
 local function remote(name:string):RemoteEvent
@@ -89,8 +90,10 @@ PlayerStateService:Start(); NoiseService:Start(); InteractionService:Start(inter
 
 local valid: boolean,errors: {string}=Registry:Scan()
 if not valid then error(`[Main] Room template validation failed with {#errors} error(s); correct every warning above`) end
+local PropService:any=require(Services:WaitForChild("PropService")).new()
+if not PropService:Scan() then error("[Main] Prop template validation failed; correct every warning above") end
 local Selector: any=require(Services.RoomSelector).new(Registry,Pacing,Config)
-local Generator: any=require(Services.RoomGenerator).new(Selector,Lifecycle,Pacing,Config,generated)
+local Generator: any=require(Services.RoomGenerator).new(Selector,Lifecycle,Pacing,Config,generated,PropService)
 local Retention:any=require(Services:WaitForChild("RoomRetentionService")).new()
 local RunManager: any=require(Services.RunManager).new(Config,Registry,Generator,Lifecycle,Cleanup,Tracker,Pacing,Retention)
 local EntityDirector:any=require(Services.EntityDirector).new(Lifecycle,RunManager,Tracker,HidingService,Retention,entityEvent)
