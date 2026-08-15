@@ -7,6 +7,7 @@ local S={}; S.__index=S
 type Record={Locker:Instance,RoomIndex:number,Root:BasePart,WasAnchored:boolean,Token:string,Generation:number,Phase:string}
 local function attachment(target:Instance,name:string):Attachment? local value=target:FindFirstChild(name,true); if value and value:IsA("Attachment") then return value end; return nil end
 local function pointCFrame(target:Instance,name:string):CFrame? local value=target:FindFirstChild(name,true); if value and value:IsA("Attachment") then return value.WorldCFrame elseif value and value:IsA("BasePart") then return value.CFrame end; return nil end
+local function setPromptsEnabled(target:Instance,enabled:boolean) for _,value in target:GetDescendants() do if value:IsA("ProximityPrompt") then value.Enabled=enabled end end end
 function S.new(states:any,tracker:any,remote:RemoteEvent,objectAnimation:any?):any return setmetatable({States=states,Tracker=tracker,Remote=remote,ObjectAnimation=objectAnimation,Lockers={} :: {[Instance]:number},Occupants={} :: {[Instance]:Player},Records={} :: {[Player]:Record},Rates={} :: {[Player]:number},Generation={} :: {[Player]:number}},S) end
 function S.IsHidden(self:any,player:Player):boolean local record:Record?=self.Records[player]; return record~=nil and record.Phase=="Hidden" end
 function S.GetLocker(self:any,player:Player):Instance? local record:Record?=self.Records[player]; return if record then record.Locker else nil end
@@ -15,7 +16,7 @@ function S.AvailableInRooms(self:any,first:number,last:number):number local coun
 function S.RegisterRoom(self:any,room:any) for _,value in room.Model:GetDescendants() do if value:GetAttribute("InteractionId")=="Locker" then self.Lockers[value]=room.Index; value:SetAttribute("Occupied",false); if self.ObjectAnimation then self.ObjectAnimation.PreloadTarget(value,{"LockerEnterObject","LockerExitObject"}) end end end end
 function S._cleanup(self:any,player:Player,reason:string)
 	self.Generation[player]=(self.Generation[player] or 0)+1; local record:Record?=self.Records[player]; if not record then return end
-	self.Records[player]=nil; if self.Occupants[record.Locker]==player then self.Occupants[record.Locker]=nil; if record.Locker.Parent then record.Locker:SetAttribute("Occupied",false); record.Locker:SetAttribute("InteractionText","Hide") end end
+	self.Records[player]=nil; if self.Occupants[record.Locker]==player then self.Occupants[record.Locker]=nil; if record.Locker.Parent then record.Locker:SetAttribute("Occupied",false); record.Locker:SetAttribute("InteractionText","Hide"); setPromptsEnabled(record.Locker,true) end end
 	if record.Root.Parent then record.Root.AssemblyLinearVelocity=Vector3.zero; record.Root.AssemblyAngularVelocity=Vector3.zero; record.Root.Anchored=record.WasAnchored; if not record.Root.Anchored then record.Root:SetNetworkOwnershipAuto() end end
 	self.States:Release(player,record.Token); self.Remote:FireClient(player,{Kind="Exited",Reason=reason})
 end
@@ -28,7 +29,7 @@ function S.Enter(self:any,player:Player,locker:Instance)
 	local interaction=attachment(locker,"InteractionPoint"); local point=if interaction then interaction.WorldPosition else locker:GetPivot().Position; local rawMax=locker:GetAttribute("MaxDistance"); local maxDistance=math.min(if typeof(rawMax)=="number" then rawMax else Config.MaximumDistance,Config.MaximumDistance); if (rootValue.Position-point).Magnitude>maxDistance then return end
 	if locker:GetAttribute("RequiresLineOfSight")~=false then local params=RaycastParams.new(); params.FilterType=Enum.RaycastFilterType.Exclude; params.FilterDescendantsInstances={character}; local hit=workspace:Raycast(rootValue.Position,point-rootValue.Position,params); if hit and not hit.Instance:IsDescendantOf(locker) then return end end
 	local token=self.States:Acquire(player,"Hiding",Config.Locks); if not token then return end
-	local generation=(self.Generation[player] or 0)+1; self.Generation[player]=generation; self.Occupants[locker]=player; locker:SetAttribute("Occupied",true); locker:SetAttribute("InteractionText","Occupied")
+	local generation=(self.Generation[player] or 0)+1; self.Generation[player]=generation; self.Occupants[locker]=player; locker:SetAttribute("Occupied",true); locker:SetAttribute("InteractionText","Occupied"); setPromptsEnabled(locker,false)
 	if Config.UnequipToolsOnEnter then humanoid:UnequipTools() end
 	local wasAnchored=rootValue.Anchored; self.Records[player]={Locker=locker,RoomIndex=roomIndex,Root=rootValue,WasAnchored=wasAnchored,Token=token,Generation=generation,Phase="Entering"}
 	local startCFrame=pointCFrame(locker,"Start")
