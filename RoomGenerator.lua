@@ -4,7 +4,7 @@ local Workspace=game:GetService("Workspace")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local Constants=require(ReplicatedStorage.Shared.RoomConstants)
 local Generator={}; Generator.__index=Generator
-function Generator.new(selector:any,lifecycle:any,pacing:any,config:any,folder:Folder): any return setmetatable({Selector=selector,Lifecycle=lifecycle,Pacing=pacing,Config=config,Folder=folder},Generator) end
+function Generator.new(selector:any,lifecycle:any,pacing:any,config:any,folder:Folder,propService:any): any return setmetatable({Selector=selector,Lifecycle=lifecycle,Pacing=pacing,Config=config,Folder=folder,PropService=propService},Generator) end
 local function parts(model:Model):(BasePart,BasePart,BasePart,Attachment)
 	local entrance=model:FindFirstChild(Constants.EntranceName)::BasePart; local exit=model:FindFirstChild(Constants.ExitName)::BasePart; local bounds=model:FindFirstChild(Constants.BoundsName)::BasePart
 	return entrance,exit,bounds,entrance:FindFirstChild(Constants.ConnectorName)::Attachment
@@ -58,7 +58,11 @@ function Generator.GenerateOne(self:any,run:any,index:number,previous:any?):any
 		run.ActiveRooms[index]=room; run.GeneratedUntilIndex=math.max(run.GeneratedUntilIndex,index); table.insert(run.RoomHistory,template.Id)
 		if template.IsUnique then run.UsedUniqueRooms[template.Id]=true end
 		local scheduled=run.ScheduledSpecialRooms[index]; if scheduled and scheduled.Grants then run.Prerequisites[scheduled.Grants]=true end
-		self.Pacing:Commit(run.CurrentPacingState,template,run.Random); self.Lifecycle:Load(room)
+		self.Pacing:Commit(run.CurrentPacingState,template,run.Random)
+		-- Furnishing is synchronous and intentionally precedes Loaded subscribers so
+		-- Interaction/Hiding/Drawer/Loot services discover generated descendants.
+		self.PropService:FurnishRoom(room,run)
+		self.Lifecycle:Load(room)
 		if self.Config.Debug.Enabled then print(`[RoomGenerator] #{index} {template.Id}, pacing={run.CurrentPacingState.Name}`) end
 		return room
 	end
