@@ -9,6 +9,8 @@ return table.freeze({
 		DefaultPoolId = "HotelDefault",
 		DefaultZonePoolId = "HotelDecor",
 		MaximumPropsPerRoom = 8,
+		-- WallSlots have their own cap, but still consume MaximumPropsPerRoom.
+		MaximumWallPropsPerRoom = 2,
 		RepetitionPenalty = 0.6,
 		PreventExactDuplicates = false,
 		Debug = false,
@@ -29,6 +31,8 @@ return table.freeze({
 				table.freeze({ PropId = "Drawer01", Weight = 25, MaximumCopies = 2 }),
 				table.freeze({ PropId = "Locker01", Weight = 10, MaximumCopies = 2 }),
 				table.freeze({ PropId = "Shelf01", Weight = 30, MaximumCopies = 3 }),
+				table.freeze({ PropId = "MiniLocker01", Weight = 25, MaximumCopies = 2 }),
+				table.freeze({ PropId = "Drawer02", Weight = 25, MaximumCopies = 2 }),
 				
 			}),
 		}),
@@ -36,6 +40,7 @@ return table.freeze({
 			EmptyWeight = 20,
 			Entries = table.freeze({
 				table.freeze({ PropId = "Drawer01", Weight = 25, MaximumCopies = 2 }),
+				table.freeze({ PropId = "Drawer02", Weight = 25, MaximumCopies = 2 }),
 				table.freeze({ PropId = "Locker01", Weight = 10, MaximumCopies = 2 }),
 				table.freeze({ PropId = "Shelf01", Weight = 30, MaximumCopies = 3 }),
 				table.freeze({ PropId = "MiniLocker01", Weight = 25, MaximumCopies = 2 }),
