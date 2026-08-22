@@ -9,7 +9,25 @@ local cache:{[Animator]:{[string]:AnimationTrack}}={}
 local activeByAnimator:{[Animator]:{Track:AnimationTrack,Generation:number}}={}
 local generations:{[Animator]:number}={}
 export type Result={Track:AnimationTrack,Duration:number,InitialLength:number,Generation:number,Cancel:()->()}
-local function definitionFor(key:string):any? local definitions:any=AnimationConfig.ObjectAnimations; return if definitions then definitions[key] else nil end
+local function profileNameFor(target:Instance):string?
+	local cursor:Instance?=target
+	while cursor~=nil do
+		local value=cursor:GetAttribute("ObjectAnimationProfile")
+		if typeof(value)=="string" and value~="" then return value end
+		cursor=cursor.Parent
+	end
+	return nil
+end
+local function definitionFor(target:Instance,key:string):any?
+	local profileName=profileNameFor(target)
+	if profileName~=nil then
+		local profiles:any=AnimationConfig.ObjectAnimationProfiles
+		local profile=if profiles then profiles[profileName] else nil
+		return if profile then profile[key] else nil
+	end
+	local definitions:any=AnimationConfig.ObjectAnimations
+	return if definitions then definitions[key] else nil
+end
 local function validId(definition:any?):boolean return definition~=nil and definition.Id~="" and definition.Id~="rbxassetid://0" end
 local function animatorFor(target:Instance):Animator?
 	local controller=target:FindFirstChildOfClass("AnimationController")
@@ -26,37 +44,42 @@ local function objectRoot(target:Instance):BasePart?
 end
 function Util.Prepare(target:Instance) local root=objectRoot(target); if root==nil then return end; root.Anchored=true; root.AssemblyLinearVelocity=Vector3.zero; root.AssemblyAngularVelocity=Vector3.zero end
 local function cachedTrack(target:Instance,key:string):AnimationTrack?
-	local definition=definitionFor(key); if not validId(definition) then return nil end
+	local definition=definitionFor(target,key); if not validId(definition) then return nil end
 	local animator=animatorFor(target); if animator==nil then return nil end
 	local animatorCache=cache[animator]; if animatorCache==nil then animatorCache={}; cache[animator]=animatorCache end
-	local track=animatorCache[key]
-	if track==nil then local animation=Instance.new("Animation"); animation.Name=key; animation.AnimationId=definition.Id; track=animator:LoadAnimation(animation); animation:Destroy(); track.Name=key; track.Priority=definition.Priority; track.Looped=definition.Looped; animatorCache[key]=track end
+	local profileName=profileNameFor(target) or "Default"
+	local cacheKey=profileName..":"..key
+	local track=animatorCache[cacheKey]
+	if track==nil then local animation=Instance.new("Animation"); animation.Name=key; animation.AnimationId=definition.Id; track=animator:LoadAnimation(animation); animation:Destroy(); track.Name=key; track.Priority=definition.Priority; track.Looped=definition.Looped; animatorCache[cacheKey]=track end
 	return track
 end
 function Util.CanPlay(target:Instance,key:string):boolean return cachedTrack(target,key)~=nil end
 function Util.PreloadTarget(target:Instance,keys:{string})
 	task.spawn(function()
 		local animations:{Instance}={}
-		for _,key in keys do local definition=definitionFor(key); if validId(definition) then local animation=Instance.new("Animation"); animation.Name=key; animation.AnimationId=definition.Id; table.insert(animations,animation); cachedTrack(target,key) end end
+		for _,key in keys do local definition=definitionFor(target,key); if validId(definition) then local animation=Instance.new("Animation"); animation.Name=key; animation.AnimationId=definition.Id; table.insert(animations,animation); cachedTrack(target,key) end end
 		if #animations>0 then local ok,err=pcall(function() ContentProvider:PreloadAsync(animations) end); if not ok and AnimationConfig.ObjectAnimationDebug then warn(`[ObjectAnimationUtil] preload failed for {target:GetFullName()}: {err}`) end end
 		for _,animation in animations do animation:Destroy() end
 	end)
 end
 function Util.Play(target:Instance,key:string,fadeTime:number?):Result?
-	local definition=definitionFor(key); if not validId(definition) then return nil end
+	local definition=definitionFor(target,key); if not validId(definition) then return nil end
 	local animator=animatorFor(target); if animator==nil then return nil end
 	local activeTrack=cachedTrack(target,key); if activeTrack==nil then return nil end
-	-- LoadAnimation may return before Roblox has resolved the clip. Playing that
-	-- zero-length track is the reason a newly joined server can swallow the first
-	-- drawer interaction. Give it the configured, bounded warm-up window.
+	-- Loading a track does not necessarily start Roblox's lazy clip resolution.
+	-- Start it once before waiting for Length, then rewind and restart from frame
+	-- zero. Waiting before Play caused the first interaction in a fresh server to
+	-- consume only the fallback duration while displaying no movement.
+	Util.Prepare(target)
+	if activeTrack.IsPlaying then activeTrack:Stop(0) end
+	activeTrack:AdjustSpeed(1); activeTrack.TimePosition=0; activeTrack:Play(0)
 	local lengthTimeout=if typeof(definition.LengthTimeout)=="number" then math.clamp(definition.LengthTimeout,0,.5) else .25
 	local deadline=os.clock()+lengthTimeout
 	while activeTrack.Length<=0 and os.clock()<deadline do RunService.Heartbeat:Wait() end
-	Util.Prepare(target)
 	generations[animator]=(generations[animator] or 0)+1; local generation=generations[animator]
 	local previous=activeByAnimator[animator]; if previous and previous.Track~=activeTrack then previous.Track:Stop(0) end
 	activeByAnimator[animator]={Track=activeTrack,Generation=generation}
-	if activeTrack.IsPlaying then activeTrack:Stop(0) end
+	activeTrack:Stop(0)
 	activeTrack:AdjustSpeed(1); activeTrack.TimePosition=0; activeTrack:Play(if fadeTime~=nil then fadeTime else 0)
 	local fallback=if typeof(definition.Duration)=="number" then math.max(.05,definition.Duration) else 1
 	local initialLength=activeTrack.Length; local duration=if initialLength>0 then initialLength else fallback
