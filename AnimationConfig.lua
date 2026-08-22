@@ -40,9 +40,30 @@ return table.freeze({
 
 	}),
 	ObjectAnimationDebug=false,
+	-- Put prop-specific object clips in a named profile, then set the String
+	-- attribute ObjectAnimationProfile on the outer prop Model. Child drawers
+	-- inherit it, so identical drawer rigs can all reuse the same two clips.
+	ObjectAnimationProfiles=table.freeze({
+		DrawerDefault=table.freeze({
+			DrawerOpen={Id="rbxassetid://104925566814206",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.55,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
+			DrawerClose={Id="rbxassetid://138834454142354",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.55,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
+		}),
+		LockerDefault=table.freeze({
+			LockerEnter={Id="rbxassetid://72838676764108",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.55,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
+			LockerIdle={Id="rbxassetid://101403921204911",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.55,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
+			LockerExit={Id="rbxassetid://113984487264215",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.55,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
+		}),
+		MiniLockerDefault=table.freeze({
+			DrawerOpen={Id="rbxassetid://98847798087797",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.55,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
+			DrawerClose={Id="rbxassetid://89897250628835",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.55,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
+		}),
+
+	}),
 	ObjectAnimations=table.freeze({
-		DrawerOpen={Id="rbxassetid://98982428590563",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.55,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
-		DrawerClose={Id="rbxassetid://136649992761867",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.55,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
+		-- Drawer clips intentionally require an explicit prop profile. This prevents
+		-- an unrelated rig from playing legacy drawer clips and flying off-origin.
+		DrawerOpen={Id="rbxassetid://104925566814206",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.55,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
+		DrawerClose={Id="rbxassetid://138834454142354",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.55,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
 		LockerEnterObject={Id="rbxassetid://84722822165057",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.7,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
 		LockerExitObject={Id="rbxassetid://115991174612221",Priority=Enum.AnimationPriority.Action,Looped=false,Duration=.65,LengthTimeout=.25,FinalFrameEpsilon=.001,HoldLeadTime=.05},
 	})
