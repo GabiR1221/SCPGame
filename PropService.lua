@@ -53,6 +53,13 @@ end
 local function stableIndex(instance: Instance): number
 	local configured = instance:GetAttribute("PropIndex")
 	if typeof(configured) == "number" then return math.floor(configured) end
+	-- String indexes such as "a", "b", and "c" are supported and remain stable
+	-- across servers; never use Lua table/instance ordering for procedural RNG.
+	if typeof(configured) == "string" and configured ~= "" then
+		local value = 0
+		for index = 1, #configured do value = (value * 31 + string.byte(configured, index)) % 1000003 end
+		return value
+	end
 	local digits = string.match(instance.Name, "(%d+)$")
 	return if digits then tonumber(digits) or 0 else 0
 end
@@ -389,6 +396,13 @@ function Service.FurnishRoom(self: any, room: any, run: any, options: FurnishOpt
 	for ordinal, source in sortedSpawnLocations(safetyRoot) do if lockers >= requiredSafety then break end; process(source, Config.Safety.SafetyPoolId, true, ordinal, nil) end
 	local slotsRoot = spawns:FindFirstChild("Slots")
 	for ordinal, source in sortedSpawnLocations(slotsRoot) do process(source, nil, source:GetAttribute("Required") == true, ordinal, nil) end
+	local wallRoot = spawns:FindFirstChild("WallSlots")
+	local wallMaximum = math.max(0, math.floor(numberAttribute(room.Model, "MaximumWallProps", Config.RoomFurnishing.MaximumWallPropsPerRoom)))
+	local wallSpawned = 0
+	for ordinal, source in sortedSpawnLocations(wallRoot) do
+		if wallSpawned >= wallMaximum then break end
+		if process(source, nil, source:GetAttribute("Required") == true, ordinal, nil) then wallSpawned += 1 end
+	end
 	local zonesRoot = spawns:FindFirstChild("Zones")
 	for _, source in sortedChildren(zonesRoot) do
 		if not source:IsA("BasePart") then if Config.RoomFurnishing.Debug then warn(`[PropService] zone {source:GetFullName()} must be a BasePart`) end; continue end
