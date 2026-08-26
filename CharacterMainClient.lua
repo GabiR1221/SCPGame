@@ -11,6 +11,8 @@ local Viewmodel={SetEquippedTool=function() end,SetIdle=function() end,PlayActio
 local Tools=require(controllers:WaitForChild("ToolController")).new(Animation,Viewmodel)
 FirstPerson:Start(); Camera:Start(); LookPoseReplication:Start(); Animation:Start(); Footsteps:Start(); CharacterSounds:Start(); Tools:Start()
 require(controllers:WaitForChild("InputController")).Start(FirstPerson)
+local Combat=require(controllers:WaitForChild("CombatController")).new(Animation); Combat:Start()
+require(controllers:WaitForChild("UpgradeController")).new(function(open:boolean) Combat:SetMenuOpen(open) end):Start()
 local Hiding=require(controllers:WaitForChild("HidingController")).new(Camera,Animation,FirstPerson); Hiding:Start()
 require(controllers:WaitForChild("InteractionController")).new(Animation,Camera,Hiding):Start()
 require(controllers:WaitForChild("CutsceneController")).new(Camera,Animation):Start()
