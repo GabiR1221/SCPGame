@@ -27,7 +27,15 @@ local function ensureDebugTemplate()
 	model.PrimaryPart=root; model.Parent=folder; warn("[EntityDirector] created DEBUG HallwayRush placeholder; replace it with your original model before publishing")
 end
 function D.new(lifecycle:any,runManager:any,tracker:any,hiding:any,retention:any,event:RemoteEvent):any
-	local behind=0; for _,definition:any in Config.Entities do behind=math.max(behind,definition.SpawnBehindRooms) end; retention:SetBehind(behind)
+	local behind=0
+	for _,definition:any in Config.Entities do
+		-- Room-bound creatures have their own service and do not satisfy the
+		-- multi-room Hallway director contract.
+		if definition.Director=="Hallway" then
+			behind=math.max(behind,definition.SpawnBehindRooms)
+		end
+	end
+	retention:SetBehind(behind)
 	return setmetatable({Lifecycle=lifecycle,RunManager=runManager,Tracker=tracker,Hiding=hiding,Retention=retention,Event=event,Evaluated={} :: {[number]:boolean},Active={} :: {Active},Pending={} :: {[string]:number},LastSpawn={} :: {[string]:number},Connection=nil :: RBXScriptConnection?},D)
 end
 function D._killRoom(self:any,active:Active,index:number) if active.Crossed[index] then return end; active.Crossed[index]=true; for _,player in Players:GetPlayers() do if self.Tracker:GetPlayerRoom(player)==index and not self.Hiding:IsHidden(player) then local character=player.Character; local humanoid=if character then character:FindFirstChildOfClass("Humanoid") else nil; if humanoid and humanoid.Health>0 then humanoid.Health=0 end end end end
@@ -46,6 +54,7 @@ end
 function D.Evaluate(self:any,room:any)
 	local index=room.Index; if self.Evaluated[index] then return end; self.Evaluated[index]=true; local run=self.RunManager:GetState(); if not run then return end
 	for id,definition:any in Config.Entities do
+		if definition.Director~="Hallway" then continue end
 		if not definition.Enabled or (not Config.Debug.IgnoreMinimumTriggerRoom and index<definition.MinimumTriggerRoom) or room.Model:GetAttribute("AllowsEntities")==false or (not Config.Debug.IgnoreCooldown and index-(self.LastSpawn[id] or -math.huge)<definition.CooldownRooms) then continue end
 		local concurrent=self.Pending[id] or 0; for _,active in self.Active do if active.Id==id then concurrent+=1 end end; if concurrent>=definition.MaximumConcurrent then continue end
 		local first=index-definition.SpawnBehindRooms; local last=index+definition.PassAheadRooms; local valid=true; for routeIndex=first,last do if not run.ActiveRooms[routeIndex] then valid=false; break end end
