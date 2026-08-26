@@ -32,6 +32,11 @@ return table.freeze({
 		FlashlightEquip={Id="rbxassetid://110714371172299",Priority=Enum.AnimationPriority.Action2,Looped=false,AuthoredSpeed=1},
 		FlashlightUnequip={Id="rbxassetid://118308237201245",Priority=Enum.AnimationPriority.Action2,Looped=false,AuthoredSpeed=1},
 		FlashlightToggle={Id="rbxassetid://129785789637011",Priority=Enum.AnimationPriority.Action2,Looped=false,AuthoredSpeed=1},
+		-- Upper-body character power animations. Replace placeholders in Studio.
+		GunPowerEquip={Id="rbxassetid://105498606838598",Priority=Enum.AnimationPriority.Action2,Looped=false,AuthoredSpeed=1},
+		GunPowerIdle={Id="rbxassetid://118836941177269",Priority=Enum.AnimationPriority.Action,Looped=true,AuthoredSpeed=1},
+		GunPowerFire={Id="rbxassetid://91623108860478",Priority=Enum.AnimationPriority.Action2,Looped=false,AuthoredSpeed=1},
+		GunPowerUnequip={Id="rbxassetid://112489189667532",Priority=Enum.AnimationPriority.Action2,Looped=false,AuthoredSpeed=1},
 		-- These play only on ReplicatedStorage.ClientAssets.Viewmodels.Flashlight.
 		FlashlightViewmodelEquip={Id="rbxassetid://0",Priority=Enum.AnimationPriority.Action,Looped=false,AuthoredSpeed=1},
 		FlashlightViewmodelIdle={Id="rbxassetid://0",Priority=Enum.AnimationPriority.Idle,Looped=true,AuthoredSpeed=1},
