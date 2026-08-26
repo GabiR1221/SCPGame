@@ -24,6 +24,7 @@ function Controller._cleanup(self: any)
 	table.clear(self.Tracks)
 	self.Current=nil; self.Direction=nil; self.Character=nil; self.Humanoid=nil; self.Animator=nil
 	self.ToolIdleKey=nil; self.ToolIdleTrack=nil; self.ToolActionTrack=nil; self.InteractionTrack=nil; self.InteractionKey=nil
+	self.PowerGeneration=(self.PowerGeneration or 0)+1; self.PowerIdleTrack=nil; self.PowerActionTrack=nil; self.PowerIdleKey=nil
 	self.HidingGeneration += 1; self.HidingEnterTrack=nil; self.HidingIdleTrack=nil; self.HidingExitTrack=nil; self.HidingActive=false; self.HidingRootJoint=nil; self.HidingWarned=false
 end
 
@@ -120,6 +121,7 @@ end
 function Controller._stopNonHidingActions(self: any, fadeTime: number?)
 	self:StopInteractionAction(fadeTime)
 	self:ClearToolAnimations()
+	self:ClearPowerAnimations()
 	for key:string,track:AnimationTrack in self.Tracks do
 		if key~="LockerEnter" and key~="LockerIdle" and key~="LockerExit" then
 			local definition:any=Config.Animations[key]
@@ -222,6 +224,18 @@ function Controller.ClearToolAnimations(self: any)
 	local action: AnimationTrack?=self.ToolActionTrack; if action then action:Stop(Config.FadeOut) end
 	local idle: AnimationTrack?=self.ToolIdleTrack; if idle then idle:Stop(Config.FadeOut) end
 	self.ToolActionTrack=nil; self.ToolIdleTrack=nil; self.ToolIdleKey=nil
+end
+
+function Controller.SetPowerIdle(self:any,animationKey:string?)
+	self.PowerGeneration=(self.PowerGeneration or 0)+1; local old:AnimationTrack?=self.PowerIdleTrack; if old then old:Stop(Config.FadeOut) end
+	self.PowerIdleKey=animationKey; self.PowerIdleTrack=nil; if not animationKey then return end; local track:AnimationTrack?=self.Tracks[animationKey]; if track then self.PowerIdleTrack=track; if not track.IsPlaying then track:Play(Config.FadeIn) end end
+end
+function Controller.PlayPowerAction(self:any,animationKey:string):AnimationTrack?
+	local track:AnimationTrack?=self.Tracks[animationKey]; if not track then return nil end; self.PowerGeneration=(self.PowerGeneration or 0)+1; local generation:number=self.PowerGeneration; local idle:AnimationTrack?=self.PowerIdleTrack; if idle then idle:Stop(Config.FadeOut) end; self.PowerActionTrack=track; track:Play(Config.FadeIn)
+	table.insert(self.Connections,track.Stopped:Connect(function() if self.PowerGeneration~=generation or self.PowerActionTrack~=track then return end; self.PowerActionTrack=nil; local current:AnimationTrack?=self.PowerIdleTrack; if current and not current.IsPlaying then current:Play(Config.FadeIn) end end)); return track
+end
+function Controller.ClearPowerAnimations(self:any)
+	self.PowerGeneration=(self.PowerGeneration or 0)+1; local action:AnimationTrack?=self.PowerActionTrack; if action then action:Stop(Config.FadeOut) end; local idle:AnimationTrack?=self.PowerIdleTrack; if idle then idle:Stop(Config.FadeOut) end; self.PowerActionTrack=nil; self.PowerIdleTrack=nil; self.PowerIdleKey=nil
 end
 
 function Controller._direction(self: any, localVelocity: Vector3): string
