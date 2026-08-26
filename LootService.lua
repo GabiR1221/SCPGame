@@ -48,7 +48,7 @@ local function lootSpawns(drawer:Instance):{Attachment}
 		while cursor and cursor~=drawer do if cursor:GetAttribute("CanSpawnLoot")==true then owner=cursor; break end; cursor=cursor.Parent end
 		if owner==nil then table.insert(result,value) end
 	end
-	table.sort(result,function(a,b)
+	table.sort(result,function(a:Attachment,b:Attachment):boolean
 		local an:number=numericAttribute(a,"LootSpawnIndex",math.huge); local bn:number=numericAttribute(b,"LootSpawnIndex",math.huge)
 		if an==bn then return a:GetFullName()<b:GetFullName() end
 		return an<bn
